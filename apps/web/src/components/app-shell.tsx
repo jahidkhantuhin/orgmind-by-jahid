@@ -29,18 +29,28 @@ function ShellContent({ currentUser }: { currentUser: AuthMeResponse }) {
         </Link>
         <div className="workspace-label">{organization?.organizationName ?? 'WORKSPACE'}</div>
         <nav>
-          <a className="nav-link active" href="#">
-            <span>⌂</span> Overview
+          <a className="nav-link active" href="#" aria-label="Overview" title="Overview">
+            <span aria-hidden="true">⌂</span>
+            <span className="nav-label">Overview</span>
           </a>
-          <a className="nav-link muted" href="#">
-            <span>▤</span> Knowledge base
-          </a>
-          <a className="nav-link muted" href="#">
-            <span>◷</span> Recent activity
-          </a>
+          <Link
+            className="nav-link knowledge-nav-link muted"
+            href="/knowledge"
+            aria-label="Knowledge base"
+            title="Knowledge base"
+          >
+            <span aria-hidden="true">▤</span>
+            <span className="nav-label">Knowledge base</span>
+          </Link>
           {organization?.role === 'admin' && (
-            <Link className="nav-link muted" href="/settings/members">
-              <span>♙</span> Members
+            <Link
+              className="nav-link muted"
+              href="/settings/members"
+              aria-label="Members"
+              title="Members"
+            >
+              <span aria-hidden="true">♙</span>
+              <span className="nav-label">Members</span>
             </Link>
           )}
         </nav>
@@ -145,7 +155,9 @@ function ShellContent({ currentUser }: { currentUser: AuthMeResponse }) {
               <strong>Good knowledge grows through sharing.</strong> Connect a source to give your
               workspace a strong start.
             </p>
-            <button className="text-button">Explore knowledge base →</button>
+            <Link className="text-button" href="/knowledge">
+              Explore knowledge base →
+            </Link>
           </div>
         </section>
       </main>

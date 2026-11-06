@@ -1,44 +1,56 @@
 import { MigrationDocumentSchema, type MigrationDocument } from '@orgmind/shared';
-import type { Document } from 'mongodb';
+import type { Collection, Document } from 'mongodb';
 import { getDatabase } from '../../lib/connections.js';
 import { membershipsRepository } from '../../modules/organizations/memberships.repository.js';
 import { organizationsRepository } from '../../modules/organizations/organizations.repository.js';
 import { usersRepository } from '../../modules/users/users.repository.js';
+import { documentsRepository } from '../../modules/documents/documents.repository.js';
 
 export async function runMigrations(): Promise<void> {
   const database = getDatabase();
   const migrations = database.collection<MigrationDocument & Document>('schema_migrations');
 
-  const migrationId = '001-auth-organizations-indexes';
+  await applyMigration(migrations, '001-auth-organizations-indexes', async () => {
+    await Promise.all([
+      organizationsRepository.ensureIndexes(),
+      membershipsRepository.ensureIndexes(),
+      usersRepository.ensureIndexes(),
+      database
+        .collection('sessions')
+        .createIndex({ token: 1 }, { unique: true, name: 'sessions_token_unique' }),
+      database.collection('sessions').createIndex({ userId: 1 }, { name: 'sessions_user' }),
+      database
+        .collection('sessions')
+        .createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: 'sessions_expiry' }),
+      database.collection('accounts').createIndex({ userId: 1 }, { name: 'accounts_user' }),
+      database
+        .collection('accounts')
+        .createIndex(
+          { providerId: 1, accountId: 1 },
+          { unique: true, name: 'accounts_provider_account_unique' },
+        ),
+      database
+        .collection('verifications')
+        .createIndex({ identifier: 1 }, { name: 'verifications_identifier' }),
+    ]);
+  });
+
+  await applyMigration(migrations, '002-document-indexes', () =>
+    documentsRepository.ensureIndexes(),
+  );
+}
+
+async function applyMigration(
+  migrations: Collection<MigrationDocument & Document>,
+  migrationId: string,
+  apply: () => Promise<void>,
+): Promise<void> {
   const existing = await migrations.findOne({ _id: migrationId });
   if (existing) {
     MigrationDocumentSchema.parse(existing);
     return;
   }
-
-  await Promise.all([
-    organizationsRepository.ensureIndexes(),
-    membershipsRepository.ensureIndexes(),
-    usersRepository.ensureIndexes(),
-    database
-      .collection('sessions')
-      .createIndex({ token: 1 }, { unique: true, name: 'sessions_token_unique' }),
-    database.collection('sessions').createIndex({ userId: 1 }, { name: 'sessions_user' }),
-    database
-      .collection('sessions')
-      .createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: 'sessions_expiry' }),
-    database.collection('accounts').createIndex({ userId: 1 }, { name: 'accounts_user' }),
-    database
-      .collection('accounts')
-      .createIndex(
-        { providerId: 1, accountId: 1 },
-        { unique: true, name: 'accounts_provider_account_unique' },
-      ),
-    database
-      .collection('verifications')
-      .createIndex({ identifier: 1 }, { name: 'verifications_identifier' }),
-  ]);
-
+  await apply();
   const record = MigrationDocumentSchema.parse({
     _id: migrationId,
     appliedAt: new Date(),

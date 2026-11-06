@@ -98,3 +98,52 @@ export const MigrationDocumentSchema = z.object({
   appliedAt: z.date(),
 });
 export type MigrationDocument = z.infer<typeof MigrationDocumentSchema>;
+
+export const DocumentExtensionSchema = z.enum(['pdf', 'docx', 'md', 'txt']);
+export type DocumentExtension = z.infer<typeof DocumentExtensionSchema>;
+
+export const DocumentStatusSchema = z.enum(['uploaded', 'parsing', 'parsed', 'failed']);
+export type DocumentStatus = z.infer<typeof DocumentStatusSchema>;
+
+export const DocumentRecordSchema = z.object({
+  _id: z.string().uuid(),
+  organizationId: z.string().min(1),
+  ownerId: z.string().min(1),
+  originalName: z.string().min(1).max(255),
+  extension: DocumentExtensionSchema,
+  mimeType: z.string().min(1).max(128),
+  sizeBytes: z.number().int().positive(),
+  storageKey: z
+    .string()
+    .regex(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(pdf|docx|md|txt)$/i,
+    ),
+  status: DocumentStatusSchema,
+  extractedText: z.string().optional(),
+  failureReason: z.string().max(500).optional(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  parsedAt: z.date().optional(),
+});
+export type DocumentRecord = z.infer<typeof DocumentRecordSchema>;
+
+export const DocumentSummarySchema = z.object({
+  id: z.string().uuid(),
+  organizationId: z.string(),
+  ownerId: z.string(),
+  originalName: z.string(),
+  extension: DocumentExtensionSchema,
+  mimeType: z.string(),
+  sizeBytes: z.number().int().positive(),
+  status: DocumentStatusSchema,
+  failureReason: z.string().optional(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  parsedAt: z.string().datetime().optional(),
+});
+export type DocumentSummary = z.infer<typeof DocumentSummarySchema>;
+
+export const OrganizationDocumentsResponseSchema = z.object({
+  documents: z.array(DocumentSummarySchema),
+});
+export type OrganizationDocumentsResponse = z.infer<typeof OrganizationDocumentsResponseSchema>;

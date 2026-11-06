@@ -10,6 +10,10 @@ This first foundation includes a pnpm TypeScript workspace, an Express 5 API wit
 
 Added Better Auth email/password sessions backed by MongoDB, validated organizations and memberships, versioned index bootstrap, and an idempotent admin seed. The first registration creates an organization and an admin membership. Admin-only member listing is protected by API role checks and the Next.js server page.
 
+## Step 3: Document upload and ingestion
+
+The Knowledge base now accepts PDF, DOCX, Markdown, and TXT files. Documents are stored locally, queued through Redis, extracted to bounded plain text, and shown with processing status. Admins and members can upload and delete; viewers can browse. Set `UPLOAD_STORAGE_DIR`, `MAX_DOCUMENT_UPLOAD_BYTES`, or `MAX_DOCUMENT_TEXT_BYTES` in `.env` to adjust the local storage path and limits.
+
 ## Quick start
 
 Requirements: Node.js 22.13+, pnpm 11.28+, and Docker Compose.
@@ -25,6 +29,8 @@ pnpm dev
 If you do not already have a local `.env` file, copy `.env.example` to `.env` before starting the services. Keep your local `.env` values when updating the example.
 
 Open [http://localhost:3000](http://localhost:3000). The API status badge should show “API operational” after MongoDB and Redis are healthy. API health is available at [http://localhost:4000/health](http://localhost:4000/health).
+
+Open **Knowledge base** in the workspace navigation to add documents. Local uploads are stored under the API process working directory at `.data/uploads` by default and are not committed.
 
 ## Workspace
 

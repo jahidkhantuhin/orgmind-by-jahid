@@ -22,6 +22,18 @@ const EnvSchema = z.object({
   SEED_ADMIN_EMAIL: z.email().default('admin@orgmind.local'),
   SEED_ADMIN_PASSWORD: z.string().min(12).default('ChangeThisPassword123!'),
   SEED_ORGANIZATION_NAME: z.string().min(2).default('OrgMind'),
+  UPLOAD_STORAGE_DIR: z.string().min(1).default('./.data/uploads'),
+  MAX_DOCUMENT_UPLOAD_BYTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(10 * 1024 * 1024),
+  MAX_DOCUMENT_TEXT_BYTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(12 * 1024 * 1024)
+    .default(3 * 1024 * 1024),
 });
 
 const parsedEnv = EnvSchema.parse(process.env);

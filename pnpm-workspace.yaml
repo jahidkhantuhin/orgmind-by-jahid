@@ -3,6 +3,7 @@ packages:
   - packages/*
 allowBuilds:
   esbuild: true
+  msgpackr-extract: true
 minimumReleaseAgeExclude:
   - '@better-auth/core@1.7.18'
   - '@better-auth/drizzle-adapter@1.7.18'

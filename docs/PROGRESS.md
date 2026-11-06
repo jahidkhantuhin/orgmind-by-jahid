@@ -15,3 +15,10 @@
 - New registrations create a private workspace and an `admin` membership. `admin`, `member`, and `viewer` are modeled as shared role values; member listing requires admin access in the API.
 - Added login/register forms, protected workspace pages, a sign-out control, and an admin-only Members settings page.
 - Added auth flow integration coverage and RBAC unit tests; the auth flow test skips when the test MongoDB is not available.
+
+## Step 3: Document upload and ingestion
+
+- Added organization-scoped document records and indexes, role-checked upload/list/delete API routes, and local disk storage with configurable file and extracted-text size limits.
+- Added a Redis-backed BullMQ ingestion worker with retries and status transitions. PDF, DOCX, Markdown, and TXT files are parsed to bounded plain text; extraction failures are visible on each document.
+- Added the Knowledge base page with upload, processing status, and delete actions. Viewers can browse status; members and admins can upload and delete.
+- Added parser and worker tests with PDF, DOCX, Markdown, and TXT fixtures. Local uploads are ignored by Git.

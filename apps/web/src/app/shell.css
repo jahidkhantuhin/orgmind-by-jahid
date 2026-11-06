@@ -463,19 +463,25 @@
   }
   .brand > span:last-child,
   .workspace-label,
-  .nav-link:not(.active) span,
-  .nav-link:not(.active),
+  .nav-link .nav-label,
   .sidebar-bottom > div:not(.avatar),
   .more {
     display: none;
   }
+  .sidebar nav {
+    margin-top: 38px;
+  }
+  .nav-link {
+    justify-content: center;
+    padding: 10px 0;
+  }
   .nav-link.active {
     font-size: 0;
     justify-content: center;
-    margin-top: 38px;
+    margin-top: 0;
     padding: 10px 0;
   }
-  .nav-link.active span {
+  .nav-link > span:first-child {
     font-size: 16px;
   }
   .sidebar-bottom {
