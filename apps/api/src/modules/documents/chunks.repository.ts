@@ -1,0 +1,82 @@
+import { Binary, type ClientSession, type Collection, type Document } from 'mongodb';
+import {
+  DocumentChunkPreviewSchema,
+  DocumentChunkSchema,
+  type DocumentChunk,
+  type DocumentChunkPreview,
+} from '@orgmind/shared';
+import { env } from '../../config/env.js';
+import { getDatabase } from '../../lib/connections.js';
+
+type StoredChunk = Omit<DocumentChunk, 'embedding'> & { embedding: Binary } & Document;
+
+function chunks(): Collection<StoredChunk> {
+  return getDatabase().collection<StoredChunk>('chunks');
+}
+
+function toStoredChunk(value: DocumentChunk): StoredChunk {
+  const chunk = DocumentChunkSchema.parse(value);
+  if (chunk.embedding.length !== env.EMBEDDING_DIMENSIONS) {
+    throw new Error(
+      `Chunk ${chunk._id} has ${chunk.embedding.length} dimensions; ${env.EMBEDDING_DIMENSIONS} are configured.`,
+    );
+  }
+  return {
+    ...chunk,
+    embedding: Binary.fromFloat32Array(Float32Array.from(chunk.embedding)),
+  } as StoredChunk;
+}
+
+function toPreview(value: unknown): DocumentChunkPreview {
+  return DocumentChunkPreviewSchema.parse(value);
+}
+
+export const chunksRepository = {
+  async ensureIndexes(): Promise<void> {
+    await Promise.all([
+      chunks().createIndex(
+        { documentId: 1, chunkIndex: 1 },
+        { unique: true, name: 'chunks_document_chunk_unique' },
+      ),
+      chunks().createIndex(
+        { orgId: 1, collectionId: 1 },
+        { name: 'chunks_organization_collection' },
+      ),
+    ]);
+  },
+
+  async replaceForDocument(
+    documentId: string,
+    records: DocumentChunk[],
+    session?: ClientSession,
+  ): Promise<void> {
+    if (records.some((record) => record.documentId !== documentId)) {
+      throw new Error('Cannot store chunks belonging to another document.');
+    }
+    await chunks().deleteMany({ documentId }, session ? { session } : {});
+    if (records.length > 0) {
+      await chunks().insertMany(records.map(toStoredChunk), {
+        ...(session ? { session } : {}),
+        ordered: true,
+      });
+    }
+  },
+
+  async deleteByDocument(documentId: string, session?: ClientSession): Promise<void> {
+    await chunks().deleteMany({ documentId }, session ? { session } : {});
+  },
+
+  async countByDocument(documentId: string): Promise<number> {
+    return chunks().countDocuments({ documentId });
+  },
+
+  async listPreviewsByDocument(documentId: string, limit = 20): Promise<DocumentChunkPreview[]> {
+    const records = await chunks()
+      .find({ documentId })
+      .project({ embedding: 0 })
+      .sort({ chunkIndex: 1 })
+      .limit(limit)
+      .toArray();
+    return records.map(toPreview);
+  },
+};

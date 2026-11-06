@@ -1,15 +1,19 @@
 import { Queue, Worker, type Job, UnrecoverableError } from 'bullmq';
 import type { DocumentRecord } from '@orgmind/shared';
+import type { DocumentChunk } from '@orgmind/shared';
 import { env } from '../../config/env.js';
 import { logger } from '../../lib/logger.js';
 import { documentsRepository } from './documents.repository.js';
 import { localDocumentStorage } from './document-storage.js';
 import { extractDocumentText } from './text-extraction.service.js';
+import { chunkDocumentText, type TextChunk } from './chunking.service.js';
+import { embeddingProvider } from './embedding.service.js';
+import { documentIngestionRepository } from './document-ingestion.repository.js';
 
 export const DOCUMENT_INGESTION_QUEUE = 'document-ingestion';
 
 export type IngestionJobData = { documentId: string };
-export type IngestionJobResult = { documentId: string; characterCount: number };
+export type IngestionJobResult = { documentId: string; characterCount: number; chunkCount: number };
 
 const redisUrl = new URL(env.REDIS_URL);
 
@@ -41,19 +45,31 @@ export const documentIngestionQueue = new Queue<IngestionJobData, IngestionJobRe
 type ProcessorDependencies = {
   findDocument: (_id: string) => Promise<DocumentRecord | null>;
   markParsing: (_id: string) => Promise<void>;
-  markParsed: (_id: string, _extractedText: string) => Promise<void>;
+  markChunking: (_id: string) => Promise<void>;
+  markEmbedding: (_id: string) => Promise<void>;
+  markParsed: (_id: string, _extractedText: string, _chunks: DocumentChunk[]) => Promise<void>;
   markFailed: (_id: string, _reason: string) => Promise<void>;
   readFile: (_key: string) => Promise<Buffer>;
   extractText: typeof extractDocumentText;
+  chunkText: (_text: string) => TextChunk[];
+  embedTexts: (_texts: string[]) => Promise<Float32Array[]>;
 };
 
 const defaultDependencies: ProcessorDependencies = {
   findDocument: (id) => documentsRepository.findById(id),
   markParsing: (id) => documentsRepository.markParsing(id),
-  markParsed: (id, text) => documentsRepository.markParsed(id, text),
+  markChunking: (id) => documentsRepository.markChunking(id),
+  markEmbedding: (id) => documentsRepository.markEmbedding(id),
+  markParsed: (id, text, chunks) => documentIngestionRepository.commitChunks(id, text, chunks),
   markFailed: (id, reason) => documentsRepository.markFailed(id, reason),
   readFile: (key) => localDocumentStorage.read(key),
   extractText: extractDocumentText,
+  chunkText: (text) =>
+    chunkDocumentText(text, {
+      targetCharacters: env.CHUNK_TARGET_CHARACTERS,
+      overlapCharacters: env.CHUNK_OVERLAP_CHARACTERS,
+    }),
+  embedTexts: (texts) => embeddingProvider.embed(texts, 'document'),
 };
 
 export function createDocumentIngestionProcessor(
@@ -63,15 +79,48 @@ export function createDocumentIngestionProcessor(
     const document = await dependencies.findDocument(job.data.documentId);
     if (!document) throw new UnrecoverableError('Document no longer exists.');
     if (document.status === 'parsed') {
-      return { documentId: document._id, characterCount: document.extractedText?.length ?? 0 };
+      return {
+        documentId: document._id,
+        characterCount: document.extractedText?.length ?? 0,
+        chunkCount: document.chunkCount ?? 0,
+      };
     }
 
     await dependencies.markParsing(document._id);
     try {
       const file = await dependencies.readFile(document.storageKey);
       const extractedText = await dependencies.extractText(document.extension, file);
-      await dependencies.markParsed(document._id, extractedText);
-      return { documentId: document._id, characterCount: extractedText.length };
+      await dependencies.markChunking(document._id);
+      const textChunks = dependencies.chunkText(extractedText);
+      if (textChunks.length === 0)
+        throw new Error('No text chunks were created from this document.');
+      await dependencies.markEmbedding(document._id);
+      const embeddings = await dependencies.embedTexts(textChunks.map((chunk) => chunk.text));
+      if (embeddings.length !== textChunks.length) {
+        throw new Error('The embedding provider returned a different vector count than requested.');
+      }
+      const chunks = textChunks.map(
+        (chunk, index): DocumentChunk => ({
+          _id: `${document._id}:${chunk.chunkIndex}`,
+          documentId: document._id,
+          orgId: document.organizationId,
+          collectionId: 'default',
+          acl: [],
+          chunkIndex: chunk.chunkIndex,
+          text: chunk.text,
+          headingPath: chunk.headingPath,
+          startOffset: chunk.startOffset,
+          endOffset: chunk.endOffset,
+          embedding: Array.from(embeddings[index] ?? []),
+          createdAt: new Date(),
+        }),
+      );
+      await dependencies.markParsed(document._id, extractedText, chunks);
+      return {
+        documentId: document._id,
+        characterCount: extractedText.length,
+        chunkCount: chunks.length,
+      };
     } catch (cause) {
       const error = cause instanceof Error ? cause : new Error('Document processing failed.');
       const maxAttempts = job.opts.attempts ?? 1;
@@ -87,7 +136,7 @@ export function startDocumentIngestionWorker(): Worker<IngestionJobData, Ingesti
   const worker = new Worker<IngestionJobData, IngestionJobResult>(
     DOCUMENT_INGESTION_QUEUE,
     createDocumentIngestionProcessor(),
-    { connection: redisConnection(null), concurrency: 2 },
+    { connection: redisConnection(null), concurrency: 1 },
   );
   worker.on('failed', (job, error) => {
     logger.warn({ documentId: job?.data.documentId, err: error }, 'Document ingestion job failed');

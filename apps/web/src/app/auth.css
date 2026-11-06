@@ -9,6 +9,12 @@
     var(--background) 62%
   );
 }
+.auth-theme-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 2;
+}
 .auth-card {
   width: min(100%, 440px);
   background: var(--surface);
@@ -105,6 +111,11 @@
   font-size: 11px;
   margin-bottom: 31px;
 }
+.members-page-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
 .members-page h1 {
   font-size: 28px;
   letter-spacing: -0.8px;
@@ -180,6 +191,17 @@
   background: #fff5e5;
   color: #a87623;
 }
+.dark .role-admin {
+  background: #193a2b;
+  color: #9ce0bd;
+}
+.dark .role-viewer {
+  background: #3a3020;
+  color: #f3ca81;
+}
+.dark .auth-error {
+  color: #ffb5ba;
+}
 .members-empty {
   padding: 22px 18px;
   color: var(--muted);
@@ -189,12 +211,17 @@
   margin-left: auto;
   width: 27px;
   height: 27px;
+  display: grid;
+  place-items: center;
   cursor: pointer;
   border: 1px solid var(--line);
   border-radius: 7px;
   color: var(--muted);
   background: var(--surface);
   font-size: 14px;
+}
+.sign-out-label {
+  display: none;
 }
 @media (max-width: 520px) {
   .auth-card {

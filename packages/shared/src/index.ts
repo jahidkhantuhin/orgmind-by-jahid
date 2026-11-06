@@ -102,7 +102,14 @@ export type MigrationDocument = z.infer<typeof MigrationDocumentSchema>;
 export const DocumentExtensionSchema = z.enum(['pdf', 'docx', 'md', 'txt']);
 export type DocumentExtension = z.infer<typeof DocumentExtensionSchema>;
 
-export const DocumentStatusSchema = z.enum(['uploaded', 'parsing', 'parsed', 'failed']);
+export const DocumentStatusSchema = z.enum([
+  'uploaded',
+  'parsing',
+  'chunking',
+  'embedding',
+  'parsed',
+  'failed',
+]);
 export type DocumentStatus = z.infer<typeof DocumentStatusSchema>;
 
 export const DocumentRecordSchema = z.object({
@@ -120,10 +127,13 @@ export const DocumentRecordSchema = z.object({
     ),
   status: DocumentStatusSchema,
   extractedText: z.string().optional(),
+  chunkCount: z.number().int().nonnegative().optional(),
   failureReason: z.string().max(500).optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
   parsedAt: z.date().optional(),
+  chunkedAt: z.date().optional(),
+  embeddedAt: z.date().optional(),
 });
 export type DocumentRecord = z.infer<typeof DocumentRecordSchema>;
 
@@ -136,6 +146,7 @@ export const DocumentSummarySchema = z.object({
   mimeType: z.string(),
   sizeBytes: z.number().int().positive(),
   status: DocumentStatusSchema,
+  chunkCount: z.number().int().nonnegative().optional(),
   failureReason: z.string().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -147,3 +158,34 @@ export const OrganizationDocumentsResponseSchema = z.object({
   documents: z.array(DocumentSummarySchema),
 });
 export type OrganizationDocumentsResponse = z.infer<typeof OrganizationDocumentsResponseSchema>;
+
+export const DocumentChunkSchema = z.object({
+  _id: z.string().min(1),
+  documentId: z.string().uuid(),
+  orgId: z.string().min(1),
+  collectionId: z.string().min(1),
+  acl: z.array(z.string()),
+  chunkIndex: z.number().int().nonnegative(),
+  text: z.string().min(1),
+  headingPath: z.array(z.string()),
+  startOffset: z.number().int().nonnegative(),
+  endOffset: z.number().int().positive(),
+  embedding: z.array(z.number().finite()).min(1),
+  createdAt: z.date(),
+});
+export type DocumentChunk = z.infer<typeof DocumentChunkSchema>;
+
+export const DocumentChunkPreviewSchema = DocumentChunkSchema.omit({
+  orgId: true,
+  collectionId: true,
+  acl: true,
+  embedding: true,
+  createdAt: true,
+});
+export type DocumentChunkPreview = z.infer<typeof DocumentChunkPreviewSchema>;
+
+export const DocumentDetailResponseSchema = z.object({
+  document: DocumentSummarySchema,
+  chunks: z.array(DocumentChunkPreviewSchema),
+});
+export type DocumentDetailResponse = z.infer<typeof DocumentDetailResponseSchema>;

@@ -22,3 +22,12 @@
 - Added a Redis-backed BullMQ ingestion worker with retries and status transitions. PDF, DOCX, Markdown, and TXT files are parsed to bounded plain text; extraction failures are visible on each document.
 - Added the Knowledge base page with upload, processing status, and delete actions. Viewers can browse status; members and admins can upload and delete.
 - Added parser and worker tests with PDF, DOCX, Markdown, and TXT fixtures. Local uploads are ignored by Git.
+
+## Step 4: Chunking, embeddings, and vector storage
+
+- Added a structure-aware chunker with heading paths, intact Markdown table rows, configurable size, and overlap.
+- Added an embedding provider interface and Google Gemini implementation with sequential batches, retrieval task types, exponential retries for rate limits/transient failures, vector validation, and normalization.
+- Added `chunks` records with tenant, collection, ACL, document, position, and heading metadata. Embeddings are stored as BSON float32 vectors. Chunk replacement and document deletion use MongoDB transactions.
+- Extended the worker with chunking and embedding statuses, atomic chunk replacement, and retryable reprocessing. Added document detail and reprocess routes plus a chunk preview page.
+- Added version-controlled MongoDB vector and text Search index definitions, filter fields for `orgId`, `collectionId`, `acl`, and `documentId`, and a command that waits for both indexes to become READY.
+- Updated local MongoDB to Atlas Local `preview`, which bundles MongoDB Search and Vector Search, and added mocked chunker/provider tests.

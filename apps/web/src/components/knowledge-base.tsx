@@ -7,6 +7,7 @@ import {
   type DocumentSummary,
   type MembershipRole,
 } from '@orgmind/shared';
+import { ThemeToggle } from './theme-toggle';
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
@@ -22,6 +23,10 @@ function statusLabel(status: DocumentSummary['status']): string {
       return 'Queued';
     case 'parsing':
       return 'Processing';
+    case 'chunking':
+      return 'Chunking';
+    case 'embedding':
+      return 'Embedding';
     case 'parsed':
       return 'Ready';
     case 'failed':
@@ -142,9 +147,12 @@ export function KnowledgeBase({
             orgmind<span className="brand-dot">.</span>
           </span>
         </Link>
-        <Link className="knowledge-back" href="/">
-          ← Workspace
-        </Link>
+        <div className="knowledge-top-actions">
+          <ThemeToggle className="knowledge-theme-toggle" />
+          <Link className="knowledge-back" href="/">
+            ← Workspace
+          </Link>
+        </div>
       </header>
       <section className="knowledge-content">
         <p className="eyebrow">{organizationName.toUpperCase()}</p>
@@ -243,7 +251,12 @@ export function KnowledgeBase({
                             {document.extension.toUpperCase()}
                           </span>
                           <div>
-                            <strong>{document.originalName}</strong>
+                            <Link
+                              className="document-open"
+                              href={`/knowledge/${encodeURIComponent(document.id)}`}
+                            >
+                              {document.originalName}
+                            </Link>
                             <small>Workspace document</small>
                           </div>
                         </div>

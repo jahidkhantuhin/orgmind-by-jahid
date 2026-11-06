@@ -4,7 +4,9 @@ import { listMembersController } from './organizations.controller.js';
 import { uploadDocumentFile } from '../documents/document-storage.js';
 import {
   deleteDocumentController,
+  getDocumentDetailController,
   listDocumentsController,
+  reingestDocumentController,
   uploadDocumentController,
 } from '../documents/documents.controller.js';
 
@@ -29,6 +31,18 @@ organizationsRouter.post(
   requireOrganizationRole(['admin', 'member']),
   uploadDocumentFile,
   uploadDocumentController,
+);
+organizationsRouter.get(
+  '/:organizationId/documents/:documentId',
+  requireAuth,
+  requireOrganizationRole(['admin', 'member', 'viewer']),
+  getDocumentDetailController,
+);
+organizationsRouter.post(
+  '/:organizationId/documents/:documentId/reingest',
+  requireAuth,
+  requireOrganizationRole(['admin', 'member']),
+  reingestDocumentController,
 );
 organizationsRouter.delete(
   '/:organizationId/documents/:documentId',

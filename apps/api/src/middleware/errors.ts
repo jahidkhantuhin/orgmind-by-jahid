@@ -2,9 +2,14 @@ import type { ErrorRequestHandler } from 'express';
 import multer from 'multer';
 import { logger } from '../lib/logger.js';
 import { UploadInputError } from '../modules/documents/document-storage.js';
+import { DocumentBusyError } from '../modules/documents/documents.service.js';
 
 export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
   if (error instanceof UploadInputError) {
+    res.status(error.statusCode).json({ error: { code: error.code, message: error.message } });
+    return;
+  }
+  if (error instanceof DocumentBusyError) {
     res.status(error.statusCode).json({ error: { code: error.code, message: error.message } });
     return;
   }

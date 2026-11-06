@@ -4,12 +4,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import Link from 'next/link';
 import { ApiStatus } from './api-status';
-import { ThemeProvider, useTheme } from './theme-provider';
+import { ThemeToggle } from './theme-toggle';
 import type { AuthMeResponse } from '@orgmind/shared';
 import { SignOutButton } from './sign-out-button';
 
 function ShellContent({ currentUser }: { currentUser: AuthMeResponse }) {
-  const { dark, toggle } = useTheme();
   const organization = currentUser.organizations[0];
   const firstName = currentUser.user.name.trim().split(/\s+/)[0] || currentUser.user.name;
   const initials = currentUser.user.name
@@ -70,9 +69,7 @@ function ShellContent({ currentUser }: { currentUser: AuthMeResponse }) {
           </div>
           <div className="top-actions">
             <ApiStatus />
-            <button className="icon-button" onClick={toggle} aria-label="Toggle dark mode">
-              {dark ? '☀' : '☾'}
-            </button>
+            <ThemeToggle className="icon-button" />
             <div className="avatar small">JT</div>
           </div>
         </header>
@@ -169,9 +166,7 @@ export function AppShell({ currentUser }: { currentUser: AuthMeResponse }) {
   const [client] = useState(() => new QueryClient());
   return (
     <QueryClientProvider client={client}>
-      <ThemeProvider>
-        <ShellContent currentUser={currentUser} />
-      </ThemeProvider>
+      <ShellContent currentUser={currentUser} />
     </QueryClientProvider>
   );
 }

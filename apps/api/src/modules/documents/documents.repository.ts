@@ -1,4 +1,4 @@
-import { type Collection, type Document } from 'mongodb';
+import { type ClientSession, type Collection, type Document } from 'mongodb';
 import { DocumentRecordSchema, type DocumentRecord, type DocumentStatus } from '@orgmind/shared';
 import { getDatabase } from '../../lib/connections.js';
 
@@ -58,15 +58,51 @@ export const documentsRepository = {
     );
   },
 
-  async markParsed(id: string, extractedText: string): Promise<void> {
+  async markChunking(id: string): Promise<void> {
+    await documents().updateOne(
+      { _id: id },
+      { $set: { status: 'chunking', updatedAt: new Date() }, $unset: { failureReason: '' } },
+    );
+  },
+
+  async markEmbedding(id: string): Promise<void> {
+    await documents().updateOne(
+      { _id: id },
+      { $set: { status: 'embedding', updatedAt: new Date() }, $unset: { failureReason: '' } },
+    );
+  },
+
+  async markParsed(
+    id: string,
+    extractedText: string,
+    chunkCount: number,
+    session?: ClientSession,
+  ): Promise<void> {
     const now = new Date();
     await documents().updateOne(
       { _id: id },
       {
-        $set: { status: 'parsed', extractedText, parsedAt: now, updatedAt: now },
+        $set: {
+          status: 'parsed',
+          extractedText,
+          chunkCount,
+          parsedAt: now,
+          chunkedAt: now,
+          embeddedAt: now,
+          updatedAt: now,
+        },
         $unset: { failureReason: '' },
       },
+      session ? { session } : {},
     );
+  },
+
+  async queueForReingestion(id: string, organizationId: string): Promise<boolean> {
+    const result = await documents().updateOne(
+      { _id: id, organizationId, status: { $in: ['parsed', 'failed'] } },
+      { $set: { status: 'uploaded', updatedAt: new Date() }, $unset: { failureReason: '' } },
+    );
+    return result.modifiedCount === 1;
   },
 
   async markFailed(id: string, failureReason: string): Promise<void> {
@@ -85,8 +121,12 @@ export const documentsRepository = {
   async deleteByIdInOrganization(
     id: string,
     organizationId: string,
+    session?: ClientSession,
   ): Promise<DocumentRecord | null> {
-    const row = await documents().findOneAndDelete({ _id: id, organizationId });
+    const row = await documents().findOneAndDelete(
+      { _id: id, organizationId },
+      session ? { session } : {},
+    );
     return row ? parseDocument(row) : null;
   },
 };

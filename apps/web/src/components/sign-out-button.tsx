@@ -15,7 +15,8 @@ export function SignOutButton() {
 
   return (
     <button className="sign-out-button" onClick={signOut} aria-label="Sign out" title="Sign out">
-      ↗
+      <span aria-hidden="true">↗</span>
+      <span className="sign-out-label">Sign out</span>
     </button>
   );
 }

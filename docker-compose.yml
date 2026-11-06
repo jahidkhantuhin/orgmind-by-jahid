@@ -1,6 +1,6 @@
 services:
   mongodb:
-    image: mongodb/mongodb-atlas-local:8.0
+    image: mongodb/mongodb-atlas-local:preview
     container_name: orgmind-mongodb
     hostname: mongodb
     environment:
@@ -11,6 +11,7 @@ services:
     volumes:
       - mongodb_data:/data/db
       - mongodb_config:/data/configdb
+      - mongodb_mongot:/data/mongot
   redis:
     image: redis:8.2-alpine
     container_name: orgmind-redis
@@ -27,4 +28,5 @@ services:
 volumes:
   mongodb_data:
   mongodb_config:
+  mongodb_mongot:
   redis_data:

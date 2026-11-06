@@ -14,6 +14,10 @@ Added Better Auth email/password sessions backed by MongoDB, validated organizat
 
 The Knowledge base now accepts PDF, DOCX, Markdown, and TXT files. Documents are stored locally, queued through Redis, extracted to bounded plain text, and shown with processing status. Admins and members can upload and delete; viewers can browse. Set `UPLOAD_STORAGE_DIR`, `MAX_DOCUMENT_UPLOAD_BYTES`, or `MAX_DOCUMENT_TEXT_BYTES` in `.env` to adjust the local storage path and limits.
 
+## Step 4: Chunking, embeddings, and vector storage
+
+Parsed documents are split into overlapping, heading-aware chunks while keeping Markdown table rows together. Gemini embeddings are generated behind a provider interface in batches, normalized to the configured dimensions, and stored as BSON float32 vectors in the `chunks` collection. MongoDB Vector Search and text search indexes include organization, collection, document, and ACL filter fields. Open a document from Knowledge base to inspect its chunk previews or reprocess it. Set `GOOGLE_API_KEY` before uploading or reprocessing documents. The local MongoDB service uses the Atlas Local `preview` image to provide local Search and Vector Search; it is for development and testing.
+
 ## Quick start
 
 Requirements: Node.js 22.13+, pnpm 11.28+, and Docker Compose.
@@ -22,6 +26,7 @@ Requirements: Node.js 22.13+, pnpm 11.28+, and Docker Compose.
 docker compose up -d --wait
 pnpm install
 pnpm db:migrate
+pnpm db:search-indexes
 pnpm db:seed
 pnpm dev
 ```
@@ -30,7 +35,7 @@ If you do not already have a local `.env` file, copy `.env.example` to `.env` be
 
 Open [http://localhost:3000](http://localhost:3000). The API status badge should show “API operational” after MongoDB and Redis are healthy. API health is available at [http://localhost:4000/health](http://localhost:4000/health).
 
-Open **Knowledge base** in the workspace navigation to add documents. Local uploads are stored under the API process working directory at `.data/uploads` by default and are not committed.
+Open **Knowledge base** in the workspace navigation to add documents. Local uploads are stored under the API process working directory at `.data/uploads` by default and are not committed. Add a Gemini API key to `.env` before uploading, then open a document to see its chunks and reprocess it.
 
 ## Workspace
 
@@ -49,7 +54,7 @@ pnpm test
 pnpm build
 ```
 
-The authentication integration test uses the separate `TEST_MONGODB_DATABASE` database. Run it with Docker services available.
+The authentication integration test uses the separate `TEST_MONGODB_DATABASE` database. Run it with Docker services available. The `db:search-indexes` command creates the version-controlled Search index definitions and waits until both are queryable; rerun it after changing the embedding dimensions.
 
 ## Author
 

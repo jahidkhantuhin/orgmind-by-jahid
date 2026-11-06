@@ -1,8 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import {
   DocumentRecordSchema,
+  DocumentDetailResponseSchema,
   DocumentSummarySchema,
   type DocumentExtension,
+  type DocumentDetailResponse,
   type DocumentRecord,
   type DocumentSummary,
 } from '@orgmind/shared';
@@ -10,6 +12,8 @@ import type { Express } from 'express';
 import { logger } from '../../lib/logger.js';
 import { documentIngestionQueue } from './document-ingestion.queue.js';
 import { documentsRepository } from './documents.repository.js';
+import { chunksRepository } from './chunks.repository.js';
+import { documentIngestionRepository } from './document-ingestion.repository.js';
 import { localDocumentStorage, mimeTypeForExtension } from './document-storage.js';
 
 function toSummary(document: DocumentRecord): DocumentSummary {
@@ -22,6 +26,7 @@ function toSummary(document: DocumentRecord): DocumentSummary {
     mimeType: document.mimeType,
     sizeBytes: document.sizeBytes,
     status: document.status,
+    chunkCount: document.chunkCount,
     failureReason: document.failureReason,
     createdAt: document.createdAt.toISOString(),
     updatedAt: document.updatedAt.toISOString(),
@@ -32,6 +37,18 @@ function toSummary(document: DocumentRecord): DocumentSummary {
 export const documentsService = {
   async list(organizationId: string): Promise<DocumentSummary[]> {
     return (await documentsRepository.listByOrganization(organizationId)).map(toSummary);
+  },
+
+  async getDetail(
+    organizationId: string,
+    documentId: string,
+  ): Promise<DocumentDetailResponse | null> {
+    const document = await documentsRepository.findByIdInOrganization(documentId, organizationId);
+    if (!document) return null;
+    return DocumentDetailResponseSchema.parse({
+      document: toSummary(document),
+      chunks: await chunksRepository.listPreviewsByDocument(documentId),
+    });
   },
 
   async upload(
@@ -79,7 +96,10 @@ export const documentsService = {
   },
 
   async delete(organizationId: string, documentId: string): Promise<boolean> {
-    const document = await documentsRepository.deleteByIdInOrganization(documentId, organizationId);
+    const document = await documentIngestionRepository.deleteDocumentAndChunks(
+      documentId,
+      organizationId,
+    );
     if (!document) return false;
 
     try {
@@ -98,4 +118,41 @@ export const documentsService = {
     }
     return true;
   },
+
+  async reingest(organizationId: string, documentId: string): Promise<DocumentSummary | null> {
+    const document = await documentsRepository.findByIdInOrganization(documentId, organizationId);
+    if (!document) return null;
+    if (['parsing', 'chunking', 'embedding'].includes(document.status)) {
+      throw new DocumentBusyError();
+    }
+
+    const existingJob = await documentIngestionQueue.getJob(documentId);
+    if (existingJob) {
+      if ((await existingJob.getState()) === 'active') throw new DocumentBusyError();
+      await existingJob.remove();
+    }
+
+    const queued = await documentsRepository.queueForReingestion(documentId, organizationId);
+    if (!queued) throw new DocumentBusyError();
+    try {
+      await documentIngestionQueue.add('ingest-document', { documentId }, { jobId: documentId });
+    } catch (error) {
+      await documentsRepository.markFailed(documentId, 'Could not queue document re-ingestion.');
+      throw error;
+    }
+
+    const updated = await documentsRepository.findByIdInOrganization(documentId, organizationId);
+    if (!updated) return null;
+    return toSummary(updated);
+  },
 };
+
+export class DocumentBusyError extends Error {
+  readonly statusCode = 409;
+  readonly code = 'DOCUMENT_PROCESSING';
+
+  constructor() {
+    super('This document is already being processed. Try again when it is finished.');
+    this.name = 'DocumentBusyError';
+  }
+}

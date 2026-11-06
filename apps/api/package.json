@@ -9,6 +9,7 @@
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
     "db:migrate": "node --env-file=../../.env --import tsx scripts/migrate.ts",
+    "db:search-indexes": "node --env-file=../../.env --import tsx scripts/search-indexes.ts",
     "db:seed": "node --env-file=../../.env --import tsx scripts/seed.ts",
     "lint": "eslint src test",
     "typecheck": "tsc --noEmit -p tsconfig.json",
@@ -16,6 +17,7 @@
   },
   "dependencies": {
     "@better-auth/mongo-adapter": "1.7.18",
+    "@google/genai": "2.31.0",
     "@orgmind/shared": "workspace:*",
     "better-auth": "1.7.18",
     "bullmq": "5.81.5",

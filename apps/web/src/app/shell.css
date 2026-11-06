@@ -485,7 +485,27 @@
     font-size: 16px;
   }
   .sidebar-bottom {
+    flex-direction: column;
     justify-content: center;
+    gap: 8px;
+  }
+  .sidebar-bottom .sign-out-button {
+    order: -1;
+    width: 100%;
+    height: auto;
+    min-height: 34px;
+    margin-left: 0;
+    padding: 4px 1px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    font-size: 13px;
+  }
+  .sidebar-bottom .sign-out-label {
+    display: block;
+    font-size: 7px;
+    line-height: 1;
   }
   .topbar {
     padding: 0 13px;
@@ -507,8 +527,7 @@
     min-height: 270px;
   }
   .hero-art {
-    right: -245px;
-    opacity: 0.3;
+    display: none;
   }
   .stat-grid {
     grid-template-columns: 1fr;

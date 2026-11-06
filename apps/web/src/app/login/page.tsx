@@ -2,11 +2,13 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { AuthForm } from '../../components/auth-form';
 import { getCurrentUser } from '../../lib/current-user';
+import { ThemeToggle } from '../../components/theme-toggle';
 
 export default async function LoginPage() {
   if (await getCurrentUser()) redirect('/');
   return (
     <main className="auth-page">
+      <ThemeToggle className="knowledge-theme-toggle auth-theme-toggle" />
       <section className="auth-card">
         <Link className="brand" href="/">
           <span className="brand-mark">O</span>

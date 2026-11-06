@@ -2,6 +2,7 @@ import { headers } from 'next/headers';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { OrganizationMembersResponseSchema } from '@orgmind/shared';
+import { ThemeToggle } from '../../../components/theme-toggle';
 import { getCurrentUser } from '../../../lib/current-user';
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
@@ -22,9 +23,12 @@ export default async function MembersPage() {
 
   return (
     <main className="members-page">
-      <Link className="back-link" href="/">
-        ← Back to workspace
-      </Link>
+      <div className="members-page-top">
+        <Link className="back-link" href="/">
+          ← Back to workspace
+        </Link>
+        <ThemeToggle className="knowledge-theme-toggle" />
+      </div>
       <p className="eyebrow">WORKSPACE SETTINGS</p>
       <h1>Members</h1>
       <p className="members-lead">People with access to {organization.organizationName}.</p>

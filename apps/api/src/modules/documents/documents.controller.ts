@@ -22,6 +22,21 @@ export const listDocumentsController: RequestHandler = async (req, res) => {
   );
 };
 
+export const getDocumentDetailController: RequestHandler = async (req, res) => {
+  const organizationId = routeParam(req.params.organizationId);
+  const documentId = routeParam(req.params.documentId);
+  if (!organizationId || !documentId) {
+    res.status(400).json({ error: { code: 'INVALID_DOCUMENT', message: 'Document is required.' } });
+    return;
+  }
+  const detail = await documentsService.getDetail(organizationId, documentId);
+  if (!detail) {
+    res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Document not found.' } });
+    return;
+  }
+  res.json(detail);
+};
+
 export const uploadDocumentController: RequestHandler = async (req, res) => {
   const organizationId = routeParam(req.params.organizationId);
   const userId = req.authSession?.user.id;
@@ -62,4 +77,19 @@ export const deleteDocumentController: RequestHandler = async (req, res) => {
     return;
   }
   res.status(204).end();
+};
+
+export const reingestDocumentController: RequestHandler = async (req, res) => {
+  const organizationId = routeParam(req.params.organizationId);
+  const documentId = routeParam(req.params.documentId);
+  if (!organizationId || !documentId) {
+    res.status(400).json({ error: { code: 'INVALID_DOCUMENT', message: 'Document is required.' } });
+    return;
+  }
+  const document = await documentsService.reingest(organizationId, documentId);
+  if (!document) {
+    res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Document not found.' } });
+    return;
+  }
+  res.status(202).json({ document });
 };

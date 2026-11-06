@@ -1,6 +1,7 @@
 import type { Job } from 'bullmq';
 import { describe, expect, it, vi } from 'vitest';
 import type { DocumentRecord } from '@orgmind/shared';
+import type { TextChunk } from '../src/modules/documents/chunking.service.js';
 import {
   createDocumentIngestionProcessor,
   type IngestionJobData,
@@ -35,17 +36,24 @@ describe('document ingestion processor', () => {
     const processor = createDocumentIngestionProcessor({
       findDocument: vi.fn().mockResolvedValue(document),
       markParsing: vi.fn(async () => void calls.push('parsing')),
-      markParsed: vi.fn(async (_id, text) => void calls.push(`parsed:${text}`)),
+      markChunking: vi.fn(async () => void calls.push('chunking')),
+      markEmbedding: vi.fn(async () => void calls.push('embedding')),
+      markParsed: vi.fn(
+        async (_id, text, chunks) => void calls.push(`parsed:${text}:${chunks.length}`),
+      ),
       markFailed: vi.fn(async (_id, reason) => void calls.push(`failed:${reason}`)),
       readFile: vi.fn().mockResolvedValue(Buffer.from('Handbook text')),
       extractText: vi.fn().mockResolvedValue('Handbook text'),
+      chunkText: vi.fn().mockReturnValue([sampleChunk]),
+      embedTexts: vi.fn().mockResolvedValue([new Float32Array([1, 0])]),
     });
 
     await expect(processor(job())).resolves.toEqual({
       documentId: document._id,
       characterCount: 'Handbook text'.length,
+      chunkCount: 1,
     });
-    expect(calls).toEqual(['parsing', 'parsed:Handbook text']);
+    expect(calls).toEqual(['parsing', 'chunking', 'embedding', 'parsed:Handbook text:1']);
   });
 
   it('marks a document failed after the final retry', async () => {
@@ -53,10 +61,14 @@ describe('document ingestion processor', () => {
     const processor = createDocumentIngestionProcessor({
       findDocument: vi.fn().mockResolvedValue(document),
       markParsing: vi.fn().mockResolvedValue(undefined),
+      markChunking: vi.fn().mockResolvedValue(undefined),
+      markEmbedding: vi.fn().mockResolvedValue(undefined),
       markParsed: vi.fn().mockResolvedValue(undefined),
       markFailed,
       readFile: vi.fn().mockRejectedValue(new Error('disk unavailable')),
       extractText: vi.fn(),
+      chunkText: vi.fn().mockReturnValue([sampleChunk]),
+      embedTexts: vi.fn().mockResolvedValue([new Float32Array([1, 0])]),
     });
 
     await expect(processor(job(2, 3))).rejects.toThrow('disk unavailable');
@@ -68,13 +80,25 @@ describe('document ingestion processor', () => {
     const processor = createDocumentIngestionProcessor({
       findDocument: vi.fn().mockResolvedValue(document),
       markParsing: vi.fn().mockResolvedValue(undefined),
+      markChunking: vi.fn().mockResolvedValue(undefined),
+      markEmbedding: vi.fn().mockResolvedValue(undefined),
       markParsed: vi.fn().mockResolvedValue(undefined),
       markFailed,
       readFile: vi.fn().mockRejectedValue(new Error('temporary disk error')),
       extractText: vi.fn(),
+      chunkText: vi.fn().mockReturnValue([sampleChunk]),
+      embedTexts: vi.fn().mockResolvedValue([new Float32Array([1, 0])]),
     });
 
     await expect(processor(job(0, 3))).rejects.toThrow('temporary disk error');
     expect(markFailed).not.toHaveBeenCalled();
   });
 });
+
+const sampleChunk: TextChunk = {
+  chunkIndex: 0,
+  text: 'Handbook text',
+  headingPath: ['Handbook'],
+  startOffset: 0,
+  endOffset: 13,
+};

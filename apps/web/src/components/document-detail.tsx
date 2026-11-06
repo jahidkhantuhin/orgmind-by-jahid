@@ -1,0 +1,231 @@
+'use client';
+
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  DocumentDetailResponseSchema,
+  DocumentSummarySchema,
+  type DocumentDetailResponse,
+  type DocumentSummary,
+  type MembershipRole,
+} from '@orgmind/shared';
+import { ThemeToggle } from './theme-toggle';
+
+const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+
+function labelForStatus(status: DocumentSummary['status']): string {
+  switch (status) {
+    case 'uploaded':
+      return 'Queued';
+    case 'parsing':
+      return 'Reading document';
+    case 'chunking':
+      return 'Splitting into sections';
+    case 'embedding':
+      return 'Creating embeddings';
+    case 'parsed':
+      return 'Ready';
+    case 'failed':
+      return 'Failed';
+  }
+}
+
+export function DocumentDetail({
+  detail: initialDetail,
+  organizationId,
+  organizationName,
+  role,
+}: {
+  detail: DocumentDetailResponse;
+  organizationId: string;
+  organizationName: string;
+  role: MembershipRole;
+}) {
+  const router = useRouter();
+  const [detail, setDetail] = useState(initialDetail);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const canManage = role === 'admin' || role === 'member';
+  const document = detail.document;
+  const inProgress = ['uploaded', 'parsing', 'chunking', 'embedding'].includes(document.status);
+
+  const refresh = useCallback(async () => {
+    const response = await fetch(
+      `${apiUrl}/organizations/${encodeURIComponent(organizationId)}/documents/${encodeURIComponent(document.id)}`,
+      { credentials: 'include', cache: 'no-store' },
+    );
+    if (!response.ok) return;
+    setDetail(DocumentDetailResponseSchema.parse(await response.json()));
+  }, [document.id, organizationId]);
+
+  useEffect(() => {
+    if (!inProgress) return;
+    const interval = window.setInterval(() => void refresh(), 2_000);
+    return () => window.clearInterval(interval);
+  }, [inProgress, refresh]);
+
+  async function reingest() {
+    setBusy(true);
+    setMessage('');
+    setError('');
+    try {
+      const response = await fetch(
+        `${apiUrl}/organizations/${encodeURIComponent(organizationId)}/documents/${encodeURIComponent(document.id)}/reingest`,
+        { method: 'POST', credentials: 'include' },
+      );
+      const payload: unknown = await response.json();
+      if (!response.ok) throw new Error('Could not queue this document for reprocessing.');
+      if (typeof payload !== 'object' || payload === null || !('document' in payload)) {
+        throw new Error('The API returned an invalid document response.');
+      }
+      const updated = DocumentSummarySchema.parse(payload.document);
+      setDetail((current) => ({ ...current, document: updated }));
+      setMessage(
+        'Reprocessing has been queued. The existing chunks stay available until the new version is ready.',
+      );
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not reprocess this document.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteDocument() {
+    if (
+      !window.confirm(
+        `Delete “${document.originalName}” and its ${document.chunkCount ?? 0} chunks?`,
+      )
+    )
+      return;
+    setBusy(true);
+    setError('');
+    try {
+      const response = await fetch(
+        `${apiUrl}/organizations/${encodeURIComponent(organizationId)}/documents/${encodeURIComponent(document.id)}`,
+        { method: 'DELETE', credentials: 'include' },
+      );
+      if (!response.ok) throw new Error('Could not delete this document. Please try again.');
+      router.push('/knowledge');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not delete this document.');
+      setBusy(false);
+    }
+  }
+
+  return (
+    <main className="knowledge-page document-detail-page">
+      <header className="knowledge-topbar">
+        <Link className="brand" href="/">
+          <span className="brand-mark">O</span>
+          <span>
+            orgmind<span className="brand-dot">.</span>
+          </span>
+        </Link>
+        <div className="knowledge-top-actions">
+          <ThemeToggle className="knowledge-theme-toggle" />
+          <Link className="knowledge-back" href="/knowledge">
+            ← Knowledge base
+          </Link>
+        </div>
+      </header>
+      <section className="knowledge-content">
+        <p className="eyebrow">{organizationName.toUpperCase()}</p>
+        <div className="detail-heading-row">
+          <div>
+            <div className="detail-breadcrumb">
+              <Link href="/knowledge">Knowledge base</Link>
+              <span>/</span>
+              {document.originalName}
+            </div>
+            <h1>{document.originalName}</h1>
+            <p className="detail-subtitle">
+              {document.extension.toUpperCase()} · {(document.sizeBytes / 1024).toFixed(0)} KB
+            </p>
+          </div>
+          <div className="detail-actions">
+            <span className={`document-status status-${document.status}`}>
+              {labelForStatus(document.status)}
+            </span>
+            {canManage && !inProgress && (
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => void reingest()}
+                disabled={busy}
+              >
+                Reprocess
+              </button>
+            )}
+            {canManage && (
+              <button
+                className="danger-button"
+                type="button"
+                onClick={() => void deleteDocument()}
+                disabled={busy}
+              >
+                Delete
+              </button>
+            )}
+          </div>
+        </div>
+        {document.failureReason && (
+          <p className="knowledge-message error" role="alert">
+            {document.failureReason}
+          </p>
+        )}
+        {message && (
+          <p className="knowledge-message success" role="status">
+            {message}
+          </p>
+        )}
+        {error && (
+          <p className="knowledge-message error" role="alert">
+            {error}
+          </p>
+        )}
+        <section className="documents-card chunk-section" aria-label="Document chunks">
+          <div className="documents-card-heading">
+            <div>
+              <h2>Document chunks</h2>
+              <p>Structure-aware sections with heading and table context.</p>
+            </div>
+            <span>{document.chunkCount ?? detail.chunks.length} total</span>
+          </div>
+          {detail.chunks.length === 0 ? (
+            <div className="documents-empty">
+              <div className="empty-file-icon">▤</div>
+              <strong>{inProgress ? 'Preparing document chunks' : 'No chunks yet'}</strong>
+              <p>
+                {inProgress
+                  ? 'This page updates as processing finishes.'
+                  : 'Reprocess this document to create searchable chunks.'}
+              </p>
+            </div>
+          ) : (
+            <div className="chunk-list">
+              {detail.chunks.map((chunk) => (
+                <article className="chunk-preview" key={chunk._id}>
+                  <header>
+                    <strong>Chunk {chunk.chunkIndex + 1}</strong>
+                    <span>{chunk.endOffset - chunk.startOffset} source characters</span>
+                  </header>
+                  {chunk.headingPath.length > 0 && (
+                    <p className="chunk-heading-path">{chunk.headingPath.join(' / ')}</p>
+                  )}
+                  <p className="chunk-text">{chunk.text}</p>
+                </article>
+              ))}
+              {(document.chunkCount ?? 0) > detail.chunks.length && (
+                <p className="chunk-more">
+                  Showing the first {detail.chunks.length} of {document.chunkCount} chunks.
+                </p>
+              )}
+            </div>
+          )}
+        </section>
+      </section>
+    </main>
+  );
+}
