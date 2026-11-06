@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import './shell.css';
+@import './auth.css';
 
 :root {
   color-scheme: light;

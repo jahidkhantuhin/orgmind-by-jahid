@@ -7,3 +7,11 @@
 - Added a responsive Next.js dashboard shell with dark mode and a live API status badge.
 - Added local MongoDB Atlas Local and Redis Compose services, environment example, and GitHub Actions CI.
 - Added a Supertest health endpoint test.
+
+## Step 2: Database, authentication, and RBAC
+
+- Added Better Auth 1.7.18 with the official MongoDB adapter, email/password sessions, a trusted frontend origin, and cookie forwarding through Express.
+- Added validated `users`, `organizations`, and `memberships` repositories, an idempotent versioned index runner, and an admin seed command.
+- New registrations create a private workspace and an `admin` membership. `admin`, `member`, and `viewer` are modeled as shared role values; member listing requires admin access in the API.
+- Added login/register forms, protected workspace pages, a sign-out control, and an admin-only Members settings page.
+- Added auth flow integration coverage and RBAC unit tests; the auth flow test skips when the test MongoDB is not available.

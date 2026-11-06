@@ -2,21 +2,32 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
+import Link from 'next/link';
 import { ApiStatus } from './api-status';
 import { ThemeProvider, useTheme } from './theme-provider';
+import type { AuthMeResponse } from '@orgmind/shared';
+import { SignOutButton } from './sign-out-button';
 
-function ShellContent() {
+function ShellContent({ currentUser }: { currentUser: AuthMeResponse }) {
   const { dark, toggle } = useTheme();
+  const organization = currentUser.organizations[0];
+  const firstName = currentUser.user.name.trim().split(/\s+/)[0] || currentUser.user.name;
+  const initials = currentUser.user.name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
   return (
     <div className="shell">
       <aside className="sidebar">
-        <a className="brand" href="#">
+        <Link className="brand" href="/">
           <span className="brand-mark">O</span>
           <span>
             orgmind<span className="brand-dot">.</span>
           </span>
-        </a>
-        <div className="workspace-label">WORKSPACE</div>
+        </Link>
+        <div className="workspace-label">{organization?.organizationName ?? 'WORKSPACE'}</div>
         <nav>
           <a className="nav-link active" href="#">
             <span>⌂</span> Overview
@@ -27,14 +38,19 @@ function ShellContent() {
           <a className="nav-link muted" href="#">
             <span>◷</span> Recent activity
           </a>
+          {organization?.role === 'admin' && (
+            <Link className="nav-link muted" href="/settings/members">
+              <span>♙</span> Members
+            </Link>
+          )}
         </nav>
         <div className="sidebar-bottom">
-          <div className="avatar">JT</div>
+          <div className="avatar">{initials}</div>
           <div>
-            <strong>Jahid Tuhin</strong>
-            <small>Workspace owner</small>
+            <strong>{currentUser.user.name}</strong>
+            <small>{currentUser.user.email}</small>
           </div>
-          <span className="more">···</span>
+          <SignOutButton />
         </div>
       </aside>
       <main className="main-area">
@@ -55,11 +71,11 @@ function ShellContent() {
             <div>
               <p className="eyebrow">YOUR COMPANY KNOWLEDGE, CONNECTED</p>
               <h1>
-                Good morning, Jahid <span>✦</span>
+                Good morning, {firstName} <span>✦</span>
               </h1>
               <p className="lead">A little more clarity for everything your team knows.</p>
             </div>
-            <div className="date-chip">FRIDAY, NOVEMBER 6</div>
+            <div className="date-chip">{organization?.role.toUpperCase() ?? 'WORKSPACE'}</div>
           </div>
           <div className="hero-card">
             <div className="hero-copy">
@@ -137,12 +153,12 @@ function ShellContent() {
   );
 }
 
-export function AppShell() {
+export function AppShell({ currentUser }: { currentUser: AuthMeResponse }) {
   const [client] = useState(() => new QueryClient());
   return (
     <QueryClientProvider client={client}>
       <ThemeProvider>
-        <ShellContent />
+        <ShellContent currentUser={currentUser} />
       </ThemeProvider>
     </QueryClientProvider>
   );

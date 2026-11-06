@@ -6,13 +6,19 @@ OrgMind is a company-internal knowledge assistant built around agentic retrieval
 
 This first foundation includes a pnpm TypeScript workspace, an Express 5 API with dependency health checks, a Next.js dashboard shell, local MongoDB Atlas Local and Redis services, and CI quality checks. The API reports a degraded state until both data services are reachable.
 
+## Step 2: Database, authentication, and RBAC
+
+Added Better Auth email/password sessions backed by MongoDB, validated organizations and memberships, versioned index bootstrap, and an idempotent admin seed. The first registration creates an organization and an admin membership. Admin-only member listing is protected by API role checks and the Next.js server page.
+
 ## Quick start
 
 Requirements: Node.js 22.13+, pnpm 11.28+, and Docker Compose.
 
 ```sh
-docker compose up -d
+docker compose up -d --wait
 pnpm install
+pnpm db:migrate
+pnpm db:seed
 pnpm dev
 ```
 
@@ -26,6 +32,8 @@ Open [http://localhost:3000](http://localhost:3000). The API status badge should
 - `apps/api` — Express 5 service with validated environment configuration, logging, security middleware, health checks, and centralized errors.
 - `packages/shared` — shared Zod schemas and API contract types.
 
+The seeded local account uses `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` from `.env`. Change the sample password before sharing a development environment.
+
 ## Quality checks
 
 ```sh
@@ -34,6 +42,8 @@ pnpm typecheck
 pnpm test
 pnpm build
 ```
+
+The authentication integration test uses the separate `TEST_MONGODB_DATABASE` database. Run it with Docker services available.
 
 ## Author
 

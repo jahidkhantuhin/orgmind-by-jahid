@@ -13,6 +13,8 @@
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
+    "db:migrate": "pnpm --filter @orgmind/api db:migrate",
+    "db:seed": "pnpm --filter @orgmind/api db:seed",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky"

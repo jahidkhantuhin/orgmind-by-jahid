@@ -9,9 +9,14 @@ export const redisClient = createClient({
 });
 redisClient.on('error', () => undefined);
 
+export function getDatabase() {
+  const name = env.NODE_ENV === 'test' ? env.TEST_MONGODB_DATABASE : env.MONGODB_DATABASE;
+  return mongoClient.db(name);
+}
+
 export async function checkMongo(): Promise<boolean> {
   try {
-    await mongoClient.db(env.MONGODB_DATABASE).command({ ping: 1 });
+    await getDatabase().command({ ping: 1 });
     return true;
   } catch {
     return false;

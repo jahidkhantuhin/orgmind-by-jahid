@@ -2,11 +2,33 @@ import { app } from './app.js';
 import { env } from './config/env.js';
 import { closeConnections } from './lib/connections.js';
 import { logger } from './lib/logger.js';
+import { runMigrations } from './db/migrations/runner.js';
 
+let closing = false;
 const server = app.listen(env.API_PORT, () =>
   logger.info({ port: env.API_PORT }, 'OrgMind API listening'),
 );
-let closing = false;
+void bootstrapDatabase();
+
+async function bootstrapDatabase(attempt = 1): Promise<void> {
+  if (closing) return;
+  try {
+    await runMigrations();
+    logger.info('Database indexes are ready');
+  } catch (error) {
+    if (attempt >= 5) {
+      logger.warn(
+        { err: error },
+        'Database bootstrap unavailable; run pnpm db:migrate when MongoDB is ready',
+      );
+      return;
+    }
+    logger.warn({ err: error, attempt }, 'Database bootstrap failed; retrying');
+    await new Promise((resolve) => setTimeout(resolve, attempt * 2000));
+    await bootstrapDatabase(attempt + 1);
+  }
+}
+
 async function shutdown(signal: string): Promise<void> {
   if (closing) return;
   closing = true;

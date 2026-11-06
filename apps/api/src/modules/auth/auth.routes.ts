@@ -1,0 +1,17 @@
+import { Router } from 'express';
+import { LoginSchema, RegisterSchema } from '@orgmind/shared';
+import { requireAuth } from '../../auth/auth.middleware.js';
+import { validate } from '../../middleware/validate.js';
+import {
+  currentUserController,
+  loginController,
+  logoutController,
+  registerController,
+} from './auth.controller.js';
+
+export const authRouter = Router();
+
+authRouter.post('/register', validate({ body: RegisterSchema }), registerController);
+authRouter.post('/login', validate({ body: LoginSchema }), loginController);
+authRouter.post('/logout', logoutController);
+authRouter.get('/me', requireAuth, currentUserController);

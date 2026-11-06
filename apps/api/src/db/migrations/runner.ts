@@ -1,0 +1,43 @@
+import { MigrationDocumentSchema } from '@orgmind/shared';
+import { getDatabase } from '../../lib/connections.js';
+import { membershipsRepository } from '../../modules/organizations/memberships.repository.js';
+import { organizationsRepository } from '../../modules/organizations/organizations.repository.js';
+import { usersRepository } from '../../modules/users/users.repository.js';
+
+export async function runMigrations(): Promise<void> {
+  const database = getDatabase();
+  const migrations = database.collection('schema_migrations');
+
+  const migrationId = '001-auth-organizations-indexes';
+  const existing = await migrations.findOne({ _id: migrationId });
+  if (existing) {
+    MigrationDocumentSchema.parse(existing);
+    return;
+  }
+
+  await Promise.all([
+    organizationsRepository.ensureIndexes(),
+    membershipsRepository.ensureIndexes(),
+    usersRepository.ensureIndexes(),
+    database
+      .collection('sessions')
+      .createIndex({ token: 1 }, { unique: true, name: 'sessions_token_unique' }),
+    database.collection('sessions').createIndex({ userId: 1 }, { name: 'sessions_user' }),
+    database
+      .collection('sessions')
+      .createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: 'sessions_expiry' }),
+    database.collection('accounts').createIndex({ userId: 1 }, { name: 'accounts_user' }),
+    database
+      .collection('accounts')
+      .createIndex(
+        { providerId: 1, accountId: 1 },
+        { unique: true, name: 'accounts_provider_account_unique' },
+      ),
+    database
+      .collection('verifications')
+      .createIndex({ identifier: 1 }, { name: 'verifications_identifier' }),
+  ]);
+
+  const record = MigrationDocumentSchema.parse({ _id: migrationId, appliedAt: new Date() });
+  await migrations.updateOne({ _id: migrationId }, { $setOnInsert: record }, { upsert: true });
+}
