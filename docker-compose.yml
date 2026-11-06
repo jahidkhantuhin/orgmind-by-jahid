@@ -1,7 +1,9 @@
+name: orgmind-knowledge-assistant
+
 services:
   mongodb:
     image: mongodb/mongodb-atlas-local:preview
-    container_name: orgmind-mongodb
+    container_name: orgmind-knowledge-assistant-mongodb
     hostname: mongodb
     environment:
       MONGODB_INITDB_ROOT_USERNAME: ${MONGODB_ROOT_USERNAME:-root}
@@ -14,7 +16,7 @@ services:
       - mongodb_mongot:/data/mongot
   redis:
     image: redis:8.2-alpine
-    container_name: orgmind-redis
+    container_name: orgmind-knowledge-assistant-redis
     ports:
       - '6379:6379'
     volumes:
