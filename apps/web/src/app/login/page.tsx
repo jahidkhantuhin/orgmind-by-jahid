@@ -16,7 +16,7 @@ export default async function LoginPage() {
         </Link>
         <p className="eyebrow">WELCOME BACK</p>
         <h1>Sign in to your workspace</h1>
-        <p className="auth-description">Your team's knowledge is ready when you are.</p>
+        <p className="auth-description">Your team&apos;s knowledge is ready when you are.</p>
         <AuthForm mode="login" />
         <p className="auth-switch">
           New to OrgMind? <Link href="/register">Create an account</Link>

@@ -1,11 +1,16 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 export function SignOutButton() {
+  const router = useRouter();
+
   async function signOut() {
     await fetch(`${apiUrl}/auth/logout`, { method: 'POST', credentials: 'include' });
-    window.location.assign('/login');
+    router.replace('/login');
+    router.refresh();
   }
 
   return (
