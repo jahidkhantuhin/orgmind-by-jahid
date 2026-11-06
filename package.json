@@ -1,0 +1,34 @@
+{
+  "name": "orgmind",
+  "version": "0.1.0",
+  "private": true,
+  "author": "Jahid Khan Tuhin",
+  "packageManager": "pnpm@11.28.10",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @orgmind/api --filter @orgmind/web dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.1",
+    "eslint": "9.39.1",
+    "eslint-config-next": "16.4.5",
+    "globals": "16.5.0",
+    "husky": "9.1.7",
+    "lint-staged": "16.2.6",
+    "prettier": "3.6.2",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.46.4"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,md,yml,yaml,css}": "prettier --write"
+  }
+}

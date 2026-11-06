@@ -1,0 +1,33 @@
+@import 'tailwindcss';
+@import './shell.css';
+
+:root {
+  color-scheme: light;
+  --background: #f7f8fa;
+  --foreground: #121826;
+  --muted: #687386;
+  --line: #e6e9ef;
+  --surface: #fff;
+  --accent: #6558e8;
+}
+.dark {
+  color-scheme: dark;
+  --background: #10131a;
+  --foreground: #edf0f7;
+  --muted: #9ca7b8;
+  --line: #292f3b;
+  --surface: #171c25;
+  --accent: #a89cff;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+button {
+  font: inherit;
+}
