@@ -1,4 +1,5 @@
-import { MigrationDocumentSchema } from '@orgmind/shared';
+import { MigrationDocumentSchema, type MigrationDocument } from '@orgmind/shared';
+import type { Document } from 'mongodb';
 import { getDatabase } from '../../lib/connections.js';
 import { membershipsRepository } from '../../modules/organizations/memberships.repository.js';
 import { organizationsRepository } from '../../modules/organizations/organizations.repository.js';
@@ -6,7 +7,7 @@ import { usersRepository } from '../../modules/users/users.repository.js';
 
 export async function runMigrations(): Promise<void> {
   const database = getDatabase();
-  const migrations = database.collection('schema_migrations');
+  const migrations = database.collection<MigrationDocument & Document>('schema_migrations');
 
   const migrationId = '001-auth-organizations-indexes';
   const existing = await migrations.findOne({ _id: migrationId });
@@ -38,6 +39,9 @@ export async function runMigrations(): Promise<void> {
       .createIndex({ identifier: 1 }, { name: 'verifications_identifier' }),
   ]);
 
-  const record = MigrationDocumentSchema.parse({ _id: migrationId, appliedAt: new Date() });
+  const record = MigrationDocumentSchema.parse({
+    _id: migrationId,
+    appliedAt: new Date(),
+  }) as MigrationDocument & Document;
   await migrations.updateOne({ _id: migrationId }, { $setOnInsert: record }, { upsert: true });
 }

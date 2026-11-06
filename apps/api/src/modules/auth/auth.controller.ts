@@ -12,7 +12,7 @@ function forwardCookies(res: Parameters<RequestHandler>[1], headers: Headers): v
 
 function sendAuthError(error: unknown, res: Parameters<RequestHandler>[1]): boolean {
   if (!isAPIError(error)) return false;
-  res.status(error.statusCode).json({ error: { code: error.code, message: error.message } });
+  res.status(error.statusCode).json({ error: { code: 'AUTH_ERROR', message: error.message } });
   return true;
 }
 

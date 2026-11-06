@@ -25,9 +25,22 @@ export const usersRepository = {
   async findByIds(ids: string[]): Promise<UserSummary[]> {
     if (ids.length === 0) return [];
     const objectIds = ids.filter((id) => ObjectId.isValid(id)).map((id) => new ObjectId(id));
-    const rows = await users()
-      .find({ $or: [{ _id: { $in: [...objectIds, ...ids] } }, { id: { $in: ids } }] })
-      .toArray();
-    return rows.map(parseUser);
+    const [objectIdRows, stringIdRows] = await Promise.all([
+      objectIds.length
+        ? users()
+            .find({ _id: { $in: objectIds } })
+            .toArray()
+        : Promise.resolve([]),
+      users()
+        .find({ id: { $in: ids } })
+        .toArray(),
+    ]);
+    const usersById = new Map(
+      [...objectIdRows, ...stringIdRows].map((row) => {
+        const user = parseUser(row);
+        return [user.id, user] as const;
+      }),
+    );
+    return [...usersById.values()];
   },
 };

@@ -17,7 +17,10 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
 export function requireOrganizationRole(allowedRoles: MembershipRole[]): RequestHandler {
   return async (req, res, next) => {
     const userId = req.authSession?.user.id;
-    const organizationId = req.params.organizationId;
+    const routeOrganizationId = req.params.organizationId;
+    const organizationId = Array.isArray(routeOrganizationId)
+      ? routeOrganizationId[0]
+      : routeOrganizationId;
     if (!userId) {
       res.status(401).json({ error: { code: 'UNAUTHENTICATED', message: 'Sign in to continue.' } });
       return;

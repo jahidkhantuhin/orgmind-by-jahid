@@ -3,8 +3,10 @@ import { type Collection, type Document } from 'mongodb';
 import { OrganizationDocumentSchema, type OrganizationDocument } from '@orgmind/shared';
 import { getDatabase } from '../../lib/connections.js';
 
-function organizations(): Collection<Document> {
-  return getDatabase().collection('organizations');
+type OrganizationRecord = OrganizationDocument & Document;
+
+function organizations(): Collection<OrganizationRecord> {
+  return getDatabase().collection<OrganizationRecord>('organizations');
 }
 
 function parseDocument(value: unknown): OrganizationDocument {
@@ -45,7 +47,7 @@ export const organizationsRepository = {
       ownerId,
       createdAt: now,
       updatedAt: now,
-    });
+    }) as OrganizationRecord;
     try {
       await organizations().insertOne(document);
       return document;

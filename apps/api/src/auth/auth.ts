@@ -37,6 +37,9 @@ export const auth = betterAuth({
     user: {
       create: {
         after: async (user) => {
+          if (typeof user.organizationName !== 'string') {
+            throw new Error('Organization name is missing from the new user record.');
+          }
           await provisionPersonalOrganization(user.id, user.organizationName);
         },
       },
