@@ -51,6 +51,12 @@ export const documentsService = {
     });
   },
 
+  async listChunkPreviews(organizationId: string, documentId: string, afterChunkIndex: number) {
+    const document = await documentsRepository.findByIdInOrganization(documentId, organizationId);
+    if (!document) return null;
+    return chunksRepository.listPreviewPageByDocument(documentId, afterChunkIndex);
+  },
+
   async upload(
     organizationId: string,
     ownerId: string,

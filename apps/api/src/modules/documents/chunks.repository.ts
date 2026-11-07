@@ -79,4 +79,24 @@ export const chunksRepository = {
       .toArray();
     return records.map(toPreview);
   },
+
+  async listPreviewPageByDocument(
+    documentId: string,
+    afterChunkIndex: number,
+    limit = 20,
+  ): Promise<{ chunks: DocumentChunkPreview[]; nextCursor: number | null; hasMore: boolean }> {
+    const records = await chunks()
+      .find({ documentId, chunkIndex: { $gt: afterChunkIndex } })
+      .project({ embedding: 0 })
+      .sort({ chunkIndex: 1 })
+      .limit(limit + 1)
+      .toArray();
+    const hasMore = records.length > limit;
+    const page = records.slice(0, limit).map(toPreview);
+    return {
+      chunks: page,
+      nextCursor: hasMore ? (page.at(-1)?.chunkIndex ?? null) : null,
+      hasMore,
+    };
+  },
 };

@@ -1,5 +1,9 @@
 import type { RequestHandler } from 'express';
-import { DocumentSummarySchema, OrganizationDocumentsResponseSchema } from '@orgmind/shared';
+import {
+  DocumentChunksPageResponseSchema,
+  DocumentSummarySchema,
+  OrganizationDocumentsResponseSchema,
+} from '@orgmind/shared';
 import { extensionForFilename } from './document-storage.js';
 import { documentsService } from './documents.service.js';
 
@@ -35,6 +39,25 @@ export const getDocumentDetailController: RequestHandler = async (req, res) => {
     return;
   }
   res.json(detail);
+};
+
+export const listDocumentChunksController: RequestHandler = async (req, res) => {
+  const organizationId = routeParam(req.params.organizationId);
+  const documentId = routeParam(req.params.documentId);
+  const rawCursor = req.query.afterChunkIndex;
+  const cursor = typeof rawCursor === 'string' ? Number(rawCursor) : Number.NaN;
+  if (!organizationId || !documentId || !Number.isSafeInteger(cursor) || cursor < 0) {
+    res
+      .status(400)
+      .json({ error: { code: 'INVALID_CURSOR', message: 'A valid chunk cursor is required.' } });
+    return;
+  }
+  const page = await documentsService.listChunkPreviews(organizationId, documentId, cursor);
+  if (!page) {
+    res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Document not found.' } });
+    return;
+  }
+  res.json(DocumentChunksPageResponseSchema.parse(page));
 };
 
 export const uploadDocumentController: RequestHandler = async (req, res) => {

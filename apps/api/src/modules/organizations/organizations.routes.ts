@@ -5,6 +5,7 @@ import { uploadDocumentFile } from '../documents/document-storage.js';
 import {
   deleteDocumentController,
   getDocumentDetailController,
+  listDocumentChunksController,
   listDocumentsController,
   reingestDocumentController,
   uploadDocumentController,
@@ -37,6 +38,12 @@ organizationsRouter.get(
   requireAuth,
   requireOrganizationRole(['admin', 'member', 'viewer']),
   getDocumentDetailController,
+);
+organizationsRouter.get(
+  '/:organizationId/documents/:documentId/chunks',
+  requireAuth,
+  requireOrganizationRole(['admin', 'member', 'viewer']),
+  listDocumentChunksController,
 );
 organizationsRouter.post(
   '/:organizationId/documents/:documentId/reingest',

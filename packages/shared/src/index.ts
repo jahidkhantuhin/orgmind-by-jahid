@@ -184,6 +184,13 @@ export const DocumentChunkPreviewSchema = DocumentChunkSchema.omit({
 });
 export type DocumentChunkPreview = z.infer<typeof DocumentChunkPreviewSchema>;
 
+export const DocumentChunksPageResponseSchema = z.object({
+  chunks: z.array(DocumentChunkPreviewSchema),
+  nextCursor: z.number().int().nonnegative().nullable(),
+  hasMore: z.boolean(),
+});
+export type DocumentChunksPageResponse = z.infer<typeof DocumentChunksPageResponseSchema>;
+
 export const DocumentDetailResponseSchema = z.object({
   document: DocumentSummarySchema,
   chunks: z.array(DocumentChunkPreviewSchema),

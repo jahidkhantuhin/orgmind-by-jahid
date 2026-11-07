@@ -376,6 +376,16 @@
   text-align: center;
   font-size: 12px;
 }
+.chunk-more > p {
+  margin: 0 0 10px;
+}
+.chunk-more .chunk-load-error {
+  color: #b42332;
+}
+.chunk-load-more {
+  min-width: 112px;
+  padding: 9px 14px;
+}
 .dark .knowledge-page {
   background: #10131a;
   color: #edf0f7;

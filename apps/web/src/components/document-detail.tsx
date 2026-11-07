@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import {
+  DocumentChunksPageResponseSchema,
   DocumentDetailResponseSchema,
   DocumentSummarySchema,
   type DocumentDetailResponse,
@@ -47,6 +48,8 @@ export function DocumentDetail({
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [chunkError, setChunkError] = useState('');
   const canManage = role === 'admin' || role === 'member';
   const document = detail.document;
   const inProgress = ['uploaded', 'parsing', 'chunking', 'embedding'].includes(document.status);
@@ -57,8 +60,48 @@ export function DocumentDetail({
       { credentials: 'include', cache: 'no-store' },
     );
     if (!response.ok) return;
-    setDetail(DocumentDetailResponseSchema.parse(await response.json()));
+    const updated = DocumentDetailResponseSchema.parse(await response.json());
+    setDetail((current) => {
+      // A completed reprocess replaces all chunks; routine status polling keeps loaded pages.
+      if (current.document.status !== 'parsed' && updated.document.status === 'parsed') {
+        return updated;
+      }
+      const chunksById = new Map(updated.chunks.map((chunk) => [chunk._id, chunk]));
+      for (const chunk of current.chunks) chunksById.set(chunk._id, chunk);
+      return {
+        ...updated,
+        chunks: [...chunksById.values()].sort((a, b) => a.chunkIndex - b.chunkIndex),
+      };
+    });
   }, [document.id, organizationId]);
+
+  async function loadMoreChunks() {
+    const cursor = detail.chunks.at(-1)?.chunkIndex;
+    if (cursor === undefined) return;
+    setLoadingMore(true);
+    setChunkError('');
+    try {
+      const query = new URLSearchParams({ afterChunkIndex: String(cursor) });
+      const response = await fetch(
+        `${apiUrl}/organizations/${encodeURIComponent(organizationId)}/documents/${encodeURIComponent(document.id)}/chunks?${query}`,
+        { credentials: 'include', cache: 'no-store' },
+      );
+      if (!response.ok) throw new Error('Could not load more chunks. Please try again.');
+      const page = DocumentChunksPageResponseSchema.parse(await response.json());
+      setDetail((current) => {
+        const chunksById = new Map(current.chunks.map((chunk) => [chunk._id, chunk]));
+        for (const chunk of page.chunks) chunksById.set(chunk._id, chunk);
+        return {
+          ...current,
+          chunks: [...chunksById.values()].sort((a, b) => a.chunkIndex - b.chunkIndex),
+        };
+      });
+    } catch (cause) {
+      setChunkError(cause instanceof Error ? cause.message : 'Could not load more chunks.');
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   useEffect(() => {
     if (!inProgress) return;
@@ -218,9 +261,24 @@ export function DocumentDetail({
                 </article>
               ))}
               {(document.chunkCount ?? 0) > detail.chunks.length && (
-                <p className="chunk-more">
-                  Showing the first {detail.chunks.length} of {document.chunkCount} chunks.
-                </p>
+                <div className="chunk-more">
+                  <p>
+                    Showing {detail.chunks.length} of {document.chunkCount} chunks.
+                  </p>
+                  {chunkError && (
+                    <p className="chunk-load-error" role="alert">
+                      {chunkError}
+                    </p>
+                  )}
+                  <button
+                    className="secondary-button chunk-load-more"
+                    type="button"
+                    onClick={() => void loadMoreChunks()}
+                    disabled={loadingMore}
+                  >
+                    {loadingMore ? 'Loading…' : 'Load more'}
+                  </button>
+                </div>
               )}
             </div>
           )}
