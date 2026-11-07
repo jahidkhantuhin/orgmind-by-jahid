@@ -54,21 +54,39 @@ export const documentsRepository = {
   async markParsing(id: string): Promise<void> {
     await documents().updateOne(
       { _id: id },
-      { $set: { status: 'parsing', updatedAt: new Date() }, $unset: { failureReason: '' } },
+      {
+        $set: { status: 'parsing', progress: 1, updatedAt: new Date() },
+        $unset: { failureReason: '' },
+      },
     );
   },
 
   async markChunking(id: string): Promise<void> {
     await documents().updateOne(
       { _id: id },
-      { $set: { status: 'chunking', updatedAt: new Date() }, $unset: { failureReason: '' } },
+      {
+        $set: { status: 'chunking', progress: 5, updatedAt: new Date() },
+        $unset: { failureReason: '' },
+      },
     );
   },
 
   async markEmbedding(id: string): Promise<void> {
     await documents().updateOne(
       { _id: id },
-      { $set: { status: 'embedding', updatedAt: new Date() }, $unset: { failureReason: '' } },
+      {
+        $set: { status: 'embedding', progress: 10, updatedAt: new Date() },
+        $unset: { failureReason: '' },
+      },
+    );
+  },
+
+  async updateProgress(id: string, progress: number): Promise<void> {
+    await documents().updateOne(
+      { _id: id, status: 'embedding' },
+      {
+        $set: { progress: Math.min(95, Math.max(10, Math.floor(progress))), updatedAt: new Date() },
+      },
     );
   },
 
@@ -84,6 +102,7 @@ export const documentsRepository = {
       {
         $set: {
           status: 'parsed',
+          progress: 100,
           extractedText,
           chunkCount,
           parsedAt: now,
@@ -100,7 +119,10 @@ export const documentsRepository = {
   async queueForReingestion(id: string, organizationId: string): Promise<boolean> {
     const result = await documents().updateOne(
       { _id: id, organizationId, status: { $in: ['parsed', 'failed'] } },
-      { $set: { status: 'uploaded', updatedAt: new Date() }, $unset: { failureReason: '' } },
+      {
+        $set: { status: 'uploaded', progress: 0, updatedAt: new Date() },
+        $unset: { failureReason: '' },
+      },
     );
     return result.modifiedCount === 1;
   },

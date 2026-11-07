@@ -32,6 +32,15 @@ function labelForStatus(status: DocumentSummary['status']): string {
   }
 }
 
+function displayProgress(document: DocumentSummary): number {
+  if (document.progress !== undefined) return document.progress;
+  if (document.status === 'parsed') return 100;
+  if (document.status === 'embedding') return 10;
+  if (document.status === 'chunking') return 5;
+  if (document.status === 'parsing') return 1;
+  return 0;
+}
+
 export function DocumentDetail({
   detail: initialDetail,
   organizationId,
@@ -191,6 +200,23 @@ export function DocumentDetail({
             <span className={`document-status status-${document.status}`}>
               {labelForStatus(document.status)}
             </span>
+            {inProgress && (
+              <div className="document-progress detail-progress">
+                <div className="document-progress-label">
+                  <span>{displayProgress(document)}%</span>
+                </div>
+                <div
+                  className="document-progress-track"
+                  role="progressbar"
+                  aria-label={`Processing ${document.originalName}`}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={displayProgress(document)}
+                >
+                  <span style={{ width: `${displayProgress(document)}%` }} />
+                </div>
+              </div>
+            )}
             {canManage && !inProgress && (
               <button
                 className="secondary-button"

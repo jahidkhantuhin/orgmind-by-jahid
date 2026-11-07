@@ -26,6 +26,7 @@ function toSummary(document: DocumentRecord): DocumentSummary {
     mimeType: document.mimeType,
     sizeBytes: document.sizeBytes,
     status: document.status,
+    progress: document.progress,
     chunkCount: document.chunkCount,
     failureReason: document.failureReason,
     createdAt: document.createdAt.toISOString(),
@@ -74,6 +75,7 @@ export const documentsService = {
       sizeBytes: file.size,
       storageKey: file.filename,
       status: 'uploaded',
+      progress: 0,
       createdAt: now,
       updatedAt: now,
     });

@@ -5,7 +5,11 @@ export type EmbeddingTask = 'document' | 'query';
 export interface EmbeddingProvider {
   readonly model: string;
   readonly dimensions: number;
-  embed(_texts: readonly string[], _task?: EmbeddingTask): Promise<Float32Array[]>;
+  embed(
+    _texts: readonly string[],
+    _task?: EmbeddingTask,
+    _onProgress?: (_completed: number, _total: number) => void | Promise<void>,
+  ): Promise<Float32Array[]>;
 }
 
 export type EmbedContentParameters = {
@@ -139,13 +143,15 @@ export function createGeminiEmbeddingProvider(options: GeminiEmbeddingOptions): 
   return {
     model: options.model,
     dimensions: options.dimensions,
-    async embed(texts, task = 'document') {
+    async embed(texts, task = 'document', onProgress) {
       if (texts.length === 0) return [];
       if (texts.some((text) => !text.trim()))
         throw new Error('Embedding inputs must not be empty.');
       const vectors: Float32Array[] = [];
       for (let offset = 0; offset < texts.length; offset += options.batchSize) {
-        vectors.push(...(await embedBatch(texts.slice(offset, offset + options.batchSize), task)));
+        const batch = await embedBatch(texts.slice(offset, offset + options.batchSize), task);
+        vectors.push(...batch);
+        await onProgress?.(vectors.length, texts.length);
       }
       return vectors;
     },

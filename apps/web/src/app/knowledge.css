@@ -261,6 +261,40 @@
   color: #6a50a0;
   background: #f3ecff;
 }
+.document-progress {
+  display: grid;
+  gap: 4px;
+  width: 112px;
+}
+.document-progress-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  color: #687184;
+  font-size: 11px;
+}
+.document-progress-track {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e9eaf0;
+}
+.document-progress-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #6c5ed5;
+  transition: width 250ms ease;
+}
+.detail-progress {
+  width: 44px;
+  gap: 3px;
+}
+.detail-progress .document-progress-label {
+  justify-content: flex-end;
+  font-size: 10px;
+}
 .document-delete {
   padding: 6px 9px;
   border: 0;
@@ -457,6 +491,12 @@
   color: #c6cedb;
   background: #2a303b;
 }
+.dark .document-progress-label {
+  color: #aab4c4;
+}
+.dark .document-progress-track {
+  background: #303746;
+}
 .dark .status-parsed {
   color: #9ce0bd;
   background: #193a2b;
@@ -522,7 +562,24 @@
   }
   .document-table td,
   .document-table th {
-    padding: 12px;
+    padding: 10px;
+  }
+  .document-name {
+    min-width: 190px;
+    gap: 8px;
+  }
+  .document-open {
+    max-width: 175px;
+  }
+  .document-progress {
+    width: 102px;
+  }
+  .document-progress .document-status {
+    padding: 4px 7px;
+    font-size: 10px;
+  }
+  .detail-progress {
+    width: 40px;
   }
   .detail-heading-row {
     align-items: flex-start;

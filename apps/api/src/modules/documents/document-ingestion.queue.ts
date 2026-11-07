@@ -47,12 +47,16 @@ type ProcessorDependencies = {
   markParsing: (_id: string) => Promise<void>;
   markChunking: (_id: string) => Promise<void>;
   markEmbedding: (_id: string) => Promise<void>;
+  updateProgress?: (_id: string, _progress: number) => Promise<void>;
   markParsed: (_id: string, _extractedText: string, _chunks: DocumentChunk[]) => Promise<void>;
   markFailed: (_id: string, _reason: string) => Promise<void>;
   readFile: (_key: string) => Promise<Buffer>;
   extractText: typeof extractDocumentText;
   chunkText: (_text: string) => TextChunk[];
-  embedTexts: (_texts: string[]) => Promise<Float32Array[]>;
+  embedTexts: (
+    _texts: string[],
+    _onProgress?: (_completed: number, _total: number) => void | Promise<void>,
+  ) => Promise<Float32Array[]>;
 };
 
 const defaultDependencies: ProcessorDependencies = {
@@ -60,6 +64,7 @@ const defaultDependencies: ProcessorDependencies = {
   markParsing: (id) => documentsRepository.markParsing(id),
   markChunking: (id) => documentsRepository.markChunking(id),
   markEmbedding: (id) => documentsRepository.markEmbedding(id),
+  updateProgress: (id, progress) => documentsRepository.updateProgress(id, progress),
   markParsed: (id, text, chunks) => documentIngestionRepository.commitChunks(id, text, chunks),
   markFailed: (id, reason) => documentsRepository.markFailed(id, reason),
   readFile: (key) => localDocumentStorage.read(key),
@@ -69,7 +74,7 @@ const defaultDependencies: ProcessorDependencies = {
       targetCharacters: env.CHUNK_TARGET_CHARACTERS,
       overlapCharacters: env.CHUNK_OVERLAP_CHARACTERS,
     }),
-  embedTexts: (texts) => embeddingProvider.embed(texts, 'document'),
+  embedTexts: (texts, onProgress) => embeddingProvider.embed(texts, 'document', onProgress),
 };
 
 export function createDocumentIngestionProcessor(
@@ -95,7 +100,11 @@ export function createDocumentIngestionProcessor(
       if (textChunks.length === 0)
         throw new Error('No text chunks were created from this document.');
       await dependencies.markEmbedding(document._id);
-      const embeddings = await dependencies.embedTexts(textChunks.map((chunk) => chunk.text));
+      const embeddings = await dependencies.embedTexts(
+        textChunks.map((chunk) => chunk.text),
+        (completed, total) =>
+          dependencies.updateProgress?.(document._id, 10 + (85 * completed) / total),
+      );
       if (embeddings.length !== textChunks.length) {
         throw new Error('The embedding provider returned a different vector count than requested.');
       }

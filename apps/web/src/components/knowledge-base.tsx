@@ -34,6 +34,15 @@ function statusLabel(status: DocumentSummary['status']): string {
   }
 }
 
+function displayProgress(document: DocumentSummary): number {
+  if (document.progress !== undefined) return document.progress;
+  if (document.status === 'parsed') return 100;
+  if (document.status === 'embedding') return 10;
+  if (document.status === 'chunking') return 5;
+  if (document.status === 'parsing') return 1;
+  return 0;
+}
+
 export function KnowledgeBase({
   organizationId,
   organizationName,
@@ -264,12 +273,35 @@ export function KnowledgeBase({
                       <td>{formatSize(document.sizeBytes)}</td>
                       <td>{new Date(document.createdAt).toLocaleDateString()}</td>
                       <td>
-                        <span
-                          className={`document-status status-${document.status}`}
-                          title={document.failureReason}
-                        >
-                          {statusLabel(document.status)}
-                        </span>
+                        {['uploaded', 'parsing', 'chunking', 'embedding'].includes(
+                          document.status,
+                        ) ? (
+                          <div className="document-progress">
+                            <div className="document-progress-label">
+                              <span className={`document-status status-${document.status}`}>
+                                {statusLabel(document.status)}
+                              </span>
+                              <span>{displayProgress(document)}%</span>
+                            </div>
+                            <div
+                              className="document-progress-track"
+                              role="progressbar"
+                              aria-label={`Processing ${document.originalName}`}
+                              aria-valuemin={0}
+                              aria-valuemax={100}
+                              aria-valuenow={displayProgress(document)}
+                            >
+                              <span style={{ width: `${displayProgress(document)}%` }} />
+                            </div>
+                          </div>
+                        ) : (
+                          <span
+                            className={`document-status status-${document.status}`}
+                            title={document.failureReason}
+                          >
+                            {statusLabel(document.status)}
+                          </span>
+                        )}
                       </td>
                       {canManage && (
                         <td>
