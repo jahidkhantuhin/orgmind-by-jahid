@@ -4,7 +4,8 @@ import { DocumentDetailResponseSchema } from '@orgmind/shared';
 import { DocumentDetail } from '../../../components/document-detail';
 import { getCurrentUser } from '../../../lib/current-user';
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+const apiUrl =
+  process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 export default async function DocumentPage({
   params,

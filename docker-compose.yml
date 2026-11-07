@@ -1,10 +1,17 @@
 name: orgmind-knowledge-assistant
 
+x-local-logging: &local-logging
+  driver: local
+  options:
+    max-size: 10m
+    max-file: '3'
+
 services:
   mongodb:
     image: mongodb/mongodb-atlas-local:preview
     container_name: orgmind-knowledge-assistant-mongodb
     hostname: mongodb
+    logging: *local-logging
     environment:
       MONGODB_INITDB_ROOT_USERNAME: ${MONGODB_ROOT_USERNAME:-root}
       MONGODB_INITDB_ROOT_PASSWORD: ${MONGODB_ROOT_PASSWORD:-orgmind-local}
@@ -17,6 +24,7 @@ services:
   redis:
     image: redis:8.2-alpine
     container_name: orgmind-knowledge-assistant-redis
+    logging: *local-logging
     ports:
       - '6379:6379'
     volumes:
@@ -27,8 +35,64 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+  api:
+    profiles: ['app']
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    working_dir: /workspace
+    command: pnpm --filter @orgmind/api dev
+    env_file: .env
+    environment:
+      API_PORT: 4000
+      MONGODB_DATABASE: ${MONGODB_DATABASE:-orgmind}
+      MONGODB_URI: 'mongodb://${MONGODB_ROOT_USERNAME:-root}:${MONGODB_ROOT_PASSWORD:-orgmind-local}@mongodb:27017/${MONGODB_DATABASE:-orgmind}?authSource=admin&directConnection=true'
+      REDIS_URL: redis://redis:6379
+      WEB_ORIGIN: http://localhost:3000
+    ports:
+      - '4000:4000'
+    depends_on:
+      mongodb:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/workspace
+      - app_node_modules:/workspace/node_modules
+      - api_node_modules:/workspace/apps/api/node_modules
+      - shared_node_modules:/workspace/packages/shared/node_modules
+      - api_uploads:/workspace/apps/api/.data/uploads
+    logging: *local-logging
+    init: true
+  web:
+    profiles: ['app']
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    working_dir: /workspace
+    command: pnpm --filter @orgmind/web dev
+    env_file: .env
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+      API_INTERNAL_URL: http://api:4000
+    ports:
+      - '3000:3000'
+    depends_on:
+      - api
+    volumes:
+      - .:/workspace
+      - app_node_modules:/workspace/node_modules
+      - web_node_modules:/workspace/apps/web/node_modules
+      - shared_node_modules:/workspace/packages/shared/node_modules
+    logging: *local-logging
+    init: true
 volumes:
   mongodb_data:
   mongodb_config:
   mongodb_mongot:
   redis_data:
+  app_node_modules:
+  api_node_modules:
+  web_node_modules:
+  shared_node_modules:
+  api_uploads:

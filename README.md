@@ -20,6 +20,8 @@ Parsed documents are split into overlapping, heading-aware chunks while keeping 
 
 **Embedding delay note:** A Gemini free-tier token-per-minute HTTP 429 was encountered during PDF ingestion. The provider retries rate-limit errors up to five times, waiting at least 65 seconds between retries for per-minute token limits; the BullMQ job can also retry up to three times. During these waits the document remains at “Embedding.” If the quota remains exhausted, processing eventually fails. Wait for the quota to reset or use an account with sufficient Gemini quota, then reprocess the document. The project does not change provider billing or quota.
 
+**Development logging note:** Pino emits structured API logs. The optional Compose `app` profile runs the API and web app as containers so their logs can be listed, followed, or filtered with `docker compose logs`; local log storage is bounded to three 10 MB files per service.
+
 ## Quick start
 
 Requirements: Node.js 22.13+, pnpm 11.28+, and Docker Compose.
@@ -36,6 +38,24 @@ pnpm dev
 If you do not already have a local `.env` file, copy `.env.example` to `.env` before starting the services. Keep your local `.env` values when updating the example.
 
 Open [http://localhost:3000](http://localhost:3000). The API status badge should show “API operational” after MongoDB and Redis are healthy. API health is available at [http://localhost:4000/health](http://localhost:4000/health).
+
+### View development logs in Docker Compose
+
+The default `pnpm dev` command runs the API and web app on the host, so Docker Compose cannot display those application logs. To run the apps in Compose instead, use the optional `app` profile (do not run `pnpm dev` at the same time because both use ports 3000 and 4000):
+
+```powershell
+docker compose --profile app up -d --build --wait
+docker compose --profile app logs --follow --tail=100 --no-log-prefix api
+```
+
+Filter recent API warning/error logs or embedding-related messages in PowerShell:
+
+```powershell
+docker compose --profile app logs --since=1h --no-log-prefix api | Select-String '"level":(40|50)'
+docker compose --profile app logs --follow --tail=200 --no-log-prefix api | Select-String '429|quota|embedding'
+```
+
+Use `web`, `mongodb`, or `redis` in place of `api` to view another service. Compose keeps bounded local logs (up to three 10 MB files per service). API logs remain structured Pino JSON, and no extra logging library is needed. Stop the Compose development stack with `docker compose --profile app down`; named data volumes are preserved.
 
 Open **Knowledge base** in the workspace navigation to add documents. Local uploads are stored under the API process working directory at `.data/uploads` by default and are not committed. Add a Gemini API key to `.env` before uploading, then open a document to see its chunks and reprocess it.
 

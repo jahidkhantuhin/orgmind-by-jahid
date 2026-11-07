@@ -1,7 +1,8 @@
 import { headers } from 'next/headers';
 import { AuthMeResponseSchema, type AuthMeResponse } from '@orgmind/shared';
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+const apiUrl =
+  process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 export async function getCurrentUser(): Promise<AuthMeResponse | null> {
   const cookie = (await headers()).get('cookie');

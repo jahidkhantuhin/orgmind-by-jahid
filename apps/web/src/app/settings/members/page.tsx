@@ -5,7 +5,8 @@ import { OrganizationMembersResponseSchema } from '@orgmind/shared';
 import { ThemeToggle } from '../../../components/theme-toggle';
 import { getCurrentUser } from '../../../lib/current-user';
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+const apiUrl =
+  process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 export default async function MembersPage() {
   const currentUser = await getCurrentUser();

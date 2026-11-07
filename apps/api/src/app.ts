@@ -19,7 +19,19 @@ app.use((req, _res, next) => {
   req.id = randomUUID();
   next();
 });
-app.use(pinoHttp({ logger, genReqId: (req) => (req as Request).id }));
+app.use(
+  pinoHttp({
+    logger,
+    genReqId: (req) => (req as Request).id,
+    autoLogging: {
+      ignore: (req) => {
+        if (env.NODE_ENV === 'production' || req.method !== 'GET') return false;
+        const path = req.url?.split('?')[0] ?? '';
+        return path === '/health' || /^\/organizations\/[^/]+\/documents(?:\/[^/]+)?$/.test(path);
+      },
+    },
+  }),
+);
 app.use(helmet());
 app.use(cors({ origin: env.WEB_ORIGIN, credentials: true }));
 app.all('/api/auth/*splat', toNodeHandler(auth));
