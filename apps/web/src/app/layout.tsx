@@ -10,7 +10,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try { if (localStorage.getItem('orgmind-theme') === 'dark') document.documentElement.classList.add('dark'); } catch {}",
+          }}
+        />
+      </head>
       <body>
         <ThemeProvider>{children}</ThemeProvider>
       </body>
