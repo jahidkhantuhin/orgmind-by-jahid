@@ -18,6 +18,8 @@ The Knowledge base now accepts PDF, DOCX, Markdown, and TXT files. Documents are
 
 Parsed documents are split into overlapping, heading-aware chunks while keeping Markdown table rows together. Gemini embeddings are generated behind a provider interface in batches, normalized to the configured dimensions, and stored as BSON float32 vectors in the `chunks` collection. MongoDB Vector Search and text search indexes include organization, collection, document, and ACL filter fields. Open a document from Knowledge base to inspect its chunk previews or reprocess it. Set `GOOGLE_API_KEY` before uploading or reprocessing documents. The local MongoDB service uses the Atlas Local `preview` image to provide local Search and Vector Search; it is for development and testing.
 
+**Embedding delay note:** A Gemini free-tier token-per-minute HTTP 429 was encountered during PDF ingestion. The provider retries rate-limit errors up to five times, waiting at least 65 seconds between retries for per-minute token limits; the BullMQ job can also retry up to three times. During these waits the document remains at “Embedding.” If the quota remains exhausted, processing eventually fails. Wait for the quota to reset or use an account with sufficient Gemini quota, then reprocess the document. The project does not change provider billing or quota.
+
 ## Quick start
 
 Requirements: Node.js 22.13+, pnpm 11.28+, and Docker Compose.
